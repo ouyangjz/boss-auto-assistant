@@ -22,7 +22,8 @@
     start: document.querySelector("#startButton"),
     pause: document.querySelector("#pauseButton"),
     stop: document.querySelector("#stopButton"),
-    clearCurrent: document.querySelector("#clearCurrentButton")
+    clearCurrent: document.querySelector("#clearCurrentButton"),
+    bulkApply: document.querySelector("#bulkApplyEnabled")
   };
 
   function render(state = {}) {
@@ -94,13 +95,25 @@
   elements.pause.addEventListener("click", () => command("PAUSE"));
   elements.stop.addEventListener("click", () => command("STOP"));
   elements.clearCurrent.addEventListener("click", clearCurrentInfo);
+  elements.bulkApply.addEventListener("change", async () => {
+    await chrome.storage.local.set({
+      [ns.CONFIG.storageKeys.bulkApplyEnabled]: elements.bulkApply.checked
+    });
+  });
 
-  chrome.storage.local.get(ns.CONFIG.storageKeys.taskState).then((result) => {
+  chrome.storage.local.get([
+    ns.CONFIG.storageKeys.taskState,
+    ns.CONFIG.storageKeys.bulkApplyEnabled
+  ]).then((result) => {
     render(result[ns.CONFIG.storageKeys.taskState]);
+    elements.bulkApply.checked = result[ns.CONFIG.storageKeys.bulkApplyEnabled] === true;
   });
   chrome.storage.onChanged.addListener((changes, areaName) => {
     if (areaName === "local" && changes[ns.CONFIG.storageKeys.taskState]) {
       render(changes[ns.CONFIG.storageKeys.taskState].newValue);
+    }
+    if (areaName === "local" && changes[ns.CONFIG.storageKeys.bulkApplyEnabled]) {
+      elements.bulkApply.checked = changes[ns.CONFIG.storageKeys.bulkApplyEnabled].newValue === true;
     }
   });
 })();

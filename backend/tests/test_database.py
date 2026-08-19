@@ -13,7 +13,7 @@ from app.database.models import (
     JobEvaluation,
     JobTag,
 )
-from app.database.services import save_first_communication, save_job_result
+from app.database.services import job_exists, save_first_communication, save_job_result
 from scripts.import_json_to_db import import_file
 
 
@@ -97,6 +97,17 @@ def test_save_job_result_maps_structured_data(database):
         application = session.scalar(select(Application))
         assert application.status == "沟通"
         assert application.evaluation_id == evaluation.id
+
+
+def test_job_exists_checks_non_empty_business_id(database):
+    _, sessions = database
+    assert job_exists("job-1", session_factory=sessions) is False
+    assert job_exists("", session_factory=sessions) is False
+
+    save_job_result(sample_payload(), session_factory=sessions)
+
+    assert job_exists("job-1", session_factory=sessions) is True
+    assert job_exists("  job-1  ", session_factory=sessions) is True
 
 
 def test_duplicate_job_creates_new_evaluation_only(database):

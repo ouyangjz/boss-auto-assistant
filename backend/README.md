@@ -51,6 +51,9 @@ COZE_TIMEOUT_FALLBACK_SCORE=50
 错误、JSON 错误或字段类型错误时，服务只记录 warning，禁用本次黑名单检查并
 正常调用 Coze。
 
+黑名单之前还会对请求中的非空 `job_id` 做数据库唯一性检查。`jobs` 表中已经存在
+该 ID 时同样返回 0 分，不调用 Coze，也不新增评估或申请记录。
+
 规则匹配只去除首尾空格并忽略英文大小写。后续手动增加规则时直接编辑 JSON，
 例如：
 
@@ -71,7 +74,7 @@ COZE_TIMEOUT_FALLBACK_SCORE=50
 岗位匹配完成后的分支规则：
 
 - `match_score < MATCH_THRESHOLD`：只返回原有评分响应。
-- 分数达标但 `self_intro_context` 为空、为 `null` 或缺失：plugin-one 仍可沟通，
+- 分数达标但 `self_intro_context` 为空、为 `null` 或缺失：job-scanner-extension 仍可沟通，
   但服务不生成自我介绍。
 - 分数达标且上下文非空：服务把任务加入 FastAPI `BackgroundTasks`，保持原有
   `/evaluate` 响应；后台向自我介绍 Workflow 原样传递 `job_name` 和
@@ -84,7 +87,7 @@ POST /api/v1/introductions/generate
 ```
 
 该路径接收公司、HR、岗位、匹配分和非空的 `self_intro_context`，返回 `202` 与
-`task_id`，随后在后台调用 Coze 并推送 plugin-two。`/jobs/evaluate` 不通过 HTTP
+`task_id`，随后在后台调用 Coze 并推送 chat-assistant-extension。`/jobs/evaluate` 不通过 HTTP
 回调自身，而是复用该路径使用的同一个 introduction service，以避免同服务网络调用。
 
 ```json
@@ -105,7 +108,7 @@ POST /api/v1/introductions/generate
 }
 ```
 
-生成完成后通过同一 FastAPI 端口的 `ws://127.0.0.1:8000/ws/plugin-two` 推送。
+生成完成后通过同一 FastAPI 端口的 `ws://127.0.0.1:8000/ws/chat-assistant-extension` 推送。
 未连接插件时消息保留在内存 pending 队列，插件重连后重推，收到 ACK 后删除。
 服务重启会清空内存队列。
 
@@ -118,9 +121,9 @@ uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 
 打开 `http://127.0.0.1:8000/docs` 调试接口，或访问 `http://127.0.0.1:8000/health` 检查服务。
 
-`POST /api/v1/plugin-two/test` 可以绕过岗位分析和自我介绍 Workflow，直接向
-plugin-two 推送测试消息。plugin-two 默认只回填；是否自动发送由插件弹窗中的本地
-开关决定。请求示例见项目根 README 和 `plugin-two/README.md`。
+`POST /api/v1/chat-assistant-extension/test` 可以绕过岗位分析和自我介绍 Workflow，直接向
+chat-assistant-extension 推送测试消息。扩展默认只回填；是否自动发送由插件弹窗中的本地
+开关决定。请求示例见项目根 README 和 `chat-assistant-extension/README.md`。
 
 运行测试：
 
@@ -151,3 +154,14 @@ Invoke-RestMethod -Method Post `
     -ContentType "application/json" `
     -Body $body
 ```
+
+海投接口使用同一请求体：
+
+```text
+POST /api/v1/jobs/bulk-evaluate
+```
+
+它按“数据库 `job_id` 唯一性 → 黑名单”的顺序检查；通过后保存岗位、固定 71 分
+评估及按 `MATCH_THRESHOLD` 计算状态的申请记录，然后立即返回
+`{"success": true, "match_score": 71}`。
+该路径不调用岗位评估 Coze，也不会调度自我介绍 Workflow。重复或黑名单岗位返回 0 分。

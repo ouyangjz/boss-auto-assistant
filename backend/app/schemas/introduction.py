@@ -19,7 +19,7 @@ class IntroductionReadyMessage(IntroductionTaskContext):
     created_at: str
 
 
-class PluginTwoTestRequest(BaseModel):
+class ChatAssistantTestRequest(BaseModel):
     company_name: str = ""
     hr_name: str = ""
     hr_title: str = ""
@@ -28,7 +28,7 @@ class PluginTwoTestRequest(BaseModel):
     greeting_message: str
 
 
-class PluginTwoTaskResponse(BaseModel):
+class ChatAssistantTaskResponse(BaseModel):
     success: bool
     task_id: str
 

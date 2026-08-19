@@ -2,7 +2,7 @@
 
 importScripts("config.js");
 
-const CONFIG = globalThis.PluginTwoConfig;
+const CONFIG = globalThis.ChatAssistantConfig;
 let socket = null;
 let reconnectAttempt = 0;
 let reconnectTimer = null;
@@ -11,7 +11,7 @@ const inFlightTaskIds = new Set();
 const contentInjectionByTabId = new Map();
 
 function log(scope, message, ...details) {
-  console.log(`[PluginTwo][${scope}] ${message}`, ...details);
+  console.log(`[ChatAssistant][${scope}] ${message}`, ...details);
 }
 
 function scheduleReconnect() {

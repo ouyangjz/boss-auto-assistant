@@ -19,7 +19,7 @@ async def generate_introduction(
     payload: IntroductionTaskContext,
     background_tasks: BackgroundTasks,
 ) -> IntroductionGenerateResponse:
-    """独立调度 Coze 自我介绍 Workflow，并在完成后推送 plugin-two。"""
+    """独立调度 Coze 自我介绍 Workflow，并在完成后推送聊天助手。"""
     if payload.match_score < settings.match_threshold:
         raise HTTPException(
             status_code=422,

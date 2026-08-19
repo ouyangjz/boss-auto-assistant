@@ -119,7 +119,7 @@ def test_generated_introduction_is_saved_before_dispatch(monkeypatch):
         fake_save,
     )
     monkeypatch.setattr(
-        "app.services.introduction_service.plugin_two_manager.enqueue",
+        "app.services.introduction_service.chat_assistant_manager.enqueue",
         fake_enqueue,
     )
     context = IntroductionTaskContext(

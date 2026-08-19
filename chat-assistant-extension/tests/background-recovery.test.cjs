@@ -54,9 +54,9 @@ function loadBackground(sendMessage, executeScript = async () => undefined) {
     setTimeout
   });
   context.importScripts = () => {
-    context.PluginTwoConfig = {
-      websocketUrl: "ws://127.0.0.1:8000/ws/plugin-two",
-      messageType: "PLUGIN_TWO_INTRODUCTION_READY",
+    context.ChatAssistantConfig = {
+      websocketUrl: "ws://127.0.0.1:8000/ws/chat-assistant-extension",
+      messageType: "CHAT_ASSISTANT_INTRODUCTION_READY",
       reconnectDelaysMs: [1000],
       heartbeatIntervalMs: 20000,
       processedTaskStorageKey: "processed",

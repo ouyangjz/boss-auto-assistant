@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.router import api_router
-from app.api.plugin_two import websocket_router
+from app.api.chat_assistant import websocket_router
 from app.core.config import settings
 from app.database.connection import init_database
 

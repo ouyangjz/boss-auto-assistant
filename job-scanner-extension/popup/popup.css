@@ -17,6 +17,10 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
 button.primary { color: white; border-color: #00a6a7; background: #00a6a7; }
 button.danger { color: #a62929; }
 .controls .clear { grid-column: 1 / -1; }
+.option-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin: 0 0 12px; padding: 10px; border: 1px solid #e2eaea; border-radius: 7px; background: white; }
+.option-row span { display: grid; gap: 3px; }
+.option-row small { color: #718084; font-size: 11px; }
+.option-row input { width: 18px; height: 18px; accent-color: #00a6a7; }
 dl { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 0; }
 dl > div { min-height: 52px; padding: 10px; border: 1px solid #e2eaea; border-radius: 7px; background: white; }
 dl > div.wide { grid-column: 1 / -1; }

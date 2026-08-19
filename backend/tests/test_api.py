@@ -36,6 +36,7 @@ def persisted_payloads(monkeypatch):
     monkeypatch.setattr(
         "app.services.job_service.save_job_result", fake_save_job_result
     )
+    monkeypatch.setattr("app.services.job_service.job_exists", lambda _job_id: False)
     return payloads
 
 
@@ -122,6 +123,90 @@ def test_blacklisted_job_returns_zero_without_calling_coze_or_saving(
             "job_name": "亚马逊英语客服（双休）",
             "job_tags": ["线上客服"],
         },
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {"success": True, "match_score": 0}
+    assert persisted_payloads == []
+
+
+def test_existing_job_returns_zero_without_calling_coze_or_saving(
+    monkeypatch, persisted_payloads
+):
+    async def fail_if_called(**kwargs):
+        raise AssertionError("duplicate job must not call Coze")
+
+    monkeypatch.setattr("app.services.job_service.job_exists", lambda _job_id: True)
+    monkeypatch.setattr(
+        "app.services.job_service.run_job_evaluation",
+        fail_if_called,
+    )
+
+    response = client.post(
+        "/api/v1/jobs/evaluate",
+        json={"job_id": "already-saved", "job_name": "重复岗位"},
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {"success": True, "match_score": 0}
+    assert persisted_payloads == []
+
+
+def test_bulk_evaluate_saves_fixed_score_without_calling_coze(
+    monkeypatch, persisted_payloads
+):
+    async def fail_if_called(**kwargs):
+        raise AssertionError("bulk evaluate must not call Coze")
+
+    monkeypatch.setattr(
+        "app.services.job_service.run_job_evaluation",
+        fail_if_called,
+    )
+
+    response = client.post(
+        "/api/v1/jobs/bulk-evaluate",
+        json={
+            "job_id": "bulk-job",
+            "job_name": "Python 开发工程师",
+            "job_tags": ["Python"],
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {"success": True, "match_score": 71}
+    assert persisted_payloads == [
+        {
+            "job_id": "bulk-job",
+            "job_name": "Python 开发工程师",
+            "job_tags": ["Python"],
+            "coze_output": {
+                "match_score": 71,
+                "bulk_apply": True,
+                "evaluation_source": "bulk_apply_default",
+            },
+        }
+    ]
+    assert persisted_payloads.application_statuses == ["沟通"]
+
+
+@pytest.mark.parametrize(
+    ("job_id", "job_name"),
+    [
+        ("already-saved", "普通岗位"),
+        ("new-blacklisted", "亚马逊英语客服（双休）"),
+    ],
+)
+def test_bulk_evaluate_skips_duplicates_and_blacklist(
+    monkeypatch, persisted_payloads, job_id, job_name
+):
+    monkeypatch.setattr(
+        "app.services.job_service.job_exists",
+        lambda candidate: candidate == "already-saved",
+    )
+
+    response = client.post(
+        "/api/v1/jobs/bulk-evaluate",
+        json={"job_id": job_id, "job_name": job_name},
     )
 
     assert response.status_code == 200
@@ -408,7 +493,7 @@ def test_realtime_flow_persists_status_and_first_communication(monkeypatch, tmp_
         save_communication,
     )
     monkeypatch.setattr(
-        "app.services.introduction_service.plugin_two_manager.enqueue", fake_enqueue
+        "app.services.introduction_service.chat_assistant_manager.enqueue", fake_enqueue
     )
 
     response = client.post(

@@ -1,4 +1,4 @@
-# Plugin Two：BOSS 自我介绍回填助手
+# Chat Assistant Extension：BOSS 自我介绍回填助手
 
 插件通过 WebSocket 接收 FastAPI 生成的 `introduction_ready` 任务，只在
 `https://www.zhipin.com/web/geek/chat*` 页面定位联系人、切换聊天并回填消息。
@@ -16,11 +16,11 @@
 1. 打开 `chrome://extensions/`。
 2. 开启“开发者模式”。
 3. 点击“加载已解压的扩展程序”。
-4. 选择本项目的 `plugin-two` 目录。
+4. 选择本项目的 `chat-assistant-extension` 目录。
 5. 打开并刷新 BOSS 消息页面。
 6. 点击插件图标，根据需要选择是否自动发送；首次安装默认为“否”。
 
-后台默认连接 `ws://127.0.0.1:8000/ws/plugin-two`。端口变化时同步修改
+后台默认连接 `ws://127.0.0.1:8000/ws/chat-assistant-extension`。端口变化时同步修改
 `config.js` 的 `websocketUrl`。
 
 如果聊天页因插件重载或 SPA 导航而没有静态注入 content script，后台会在首次
@@ -53,10 +53,10 @@ $body = @{
 } | ConvertTo-Json
 
 Invoke-RestMethod -Method Post `
-    -Uri "http://127.0.0.1:8000/api/v1/plugin-two/test" `
+    -Uri "http://127.0.0.1:8000/api/v1/chat-assistant-extension/test" `
     -ContentType "application/json" `
     -Body $body
 ```
 
-扩展 Service Worker 控制台应出现 `[PluginTwo][WS] connected`，页面控制台应出现
+扩展 Service Worker 控制台应出现 `[ChatAssistant][WS] connected`，页面控制台应出现
 联系人扫描、右侧校验及回填日志。分别测试开关关闭和开启两种模式。

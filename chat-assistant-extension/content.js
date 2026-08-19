@@ -1,21 +1,21 @@
 "use strict";
 
 (() => {
-  if (globalThis.__PLUGIN_TWO_CONTENT_SCRIPT_LOADED__ === true) {
-    console.log("[PluginTwo][Content] already loaded; skip duplicate registration");
+  if (globalThis.__CHAT_ASSISTANT_CONTENT_SCRIPT_LOADED__ === true) {
+    console.log("[ChatAssistant][Content] already loaded; skip duplicate registration");
     return;
   }
 
-  const CONFIG = globalThis.PluginTwoConfig;
+  const CONFIG = globalThis.ChatAssistantConfig;
   if (!CONFIG?.selectors || !CONFIG?.messageType) {
-    throw new Error("PluginTwoConfig is unavailable");
+    throw new Error("ChatAssistantConfig is unavailable");
   }
-  globalThis.__PLUGIN_TWO_CONTENT_SCRIPT_LOADED__ = true;
+  globalThis.__CHAT_ASSISTANT_CONTENT_SCRIPT_LOADED__ = true;
   const SELECTORS = CONFIG.selectors;
   let taskQueue = Promise.resolve();
 
   function log(scope, message, ...details) {
-    console.log(`[PluginTwo][${scope}] ${message}`, ...details);
+    console.log(`[ChatAssistant][${scope}] ${message}`, ...details);
   }
 
   function normalizeText(value) {
@@ -548,7 +548,7 @@
     return true;
   });
 
-  globalThis.__PLUGIN_TWO_DEBUG__ = Object.freeze({
+  globalThis.__CHAT_ASSISTANT_DEBUG__ = Object.freeze({
     normalizeText,
     getContactRows,
     findBestCandidate,

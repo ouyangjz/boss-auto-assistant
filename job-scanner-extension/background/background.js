@@ -3,20 +3,26 @@ importScripts("../config/constants.js", "../utils/logger.js");
 const { CONFIG, MESSAGES } = globalThis.BossPlugin;
 
 chrome.runtime.onInstalled.addListener(async () => {
-  const existing = await chrome.storage.local.get(CONFIG.storageKeys.taskState);
+  const existing = await chrome.storage.local.get([
+    CONFIG.storageKeys.taskState,
+    CONFIG.storageKeys.bulkApplyEnabled
+  ]);
+  const defaults = {};
   if (!existing[CONFIG.storageKeys.taskState]) {
-    await chrome.storage.local.set({
-      [CONFIG.storageKeys.taskState]: {
-        status: "IDLE",
-        currentJob: "",
-        scannedCount: 0,
-        matchedCount: 0,
-        currentScore: null,
-        lastError: "",
-        updatedAt: new Date().toISOString()
-      }
-    });
+    defaults[CONFIG.storageKeys.taskState] = {
+      status: "IDLE",
+      currentJob: "",
+      scannedCount: 0,
+      matchedCount: 0,
+      currentScore: null,
+      lastError: "",
+      updatedAt: new Date().toISOString()
+    };
   }
+  if (existing[CONFIG.storageKeys.bulkApplyEnabled] === undefined) {
+    defaults[CONFIG.storageKeys.bulkApplyEnabled] = false;
+  }
+  if (Object.keys(defaults).length) await chrome.storage.local.set(defaults);
 });
 
 const pendingRequests = new Map();
@@ -26,7 +32,10 @@ async function evaluateJob(payload, requestId) {
   pendingRequests.set(requestId, controller);
   const timeout = setTimeout(() => controller.abort(), CONFIG.requestTimeoutMs);
   try {
-    const response = await fetch(CONFIG.apiUrl, {
+    const stored = await chrome.storage.local.get(CONFIG.storageKeys.bulkApplyEnabled);
+    const bulkApplyEnabled = stored[CONFIG.storageKeys.bulkApplyEnabled] === true;
+    const apiUrl = bulkApplyEnabled ? CONFIG.bulkApiUrl : CONFIG.apiUrl;
+    const response = await fetch(apiUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),

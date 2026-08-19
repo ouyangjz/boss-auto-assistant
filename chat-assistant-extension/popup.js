@@ -1,6 +1,6 @@
 "use strict";
 
-const CONFIG = globalThis.PluginTwoConfig;
+const CONFIG = globalThis.ChatAssistantConfig;
 const toggle = document.getElementById("autoSendToggle");
 const modeText = document.getElementById("modeText");
 const warning = document.getElementById("warning");

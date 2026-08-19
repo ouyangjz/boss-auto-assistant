@@ -17,7 +17,7 @@ from app.services.coze_client import (
     CozeResponseError,
     CozeTimeoutError,
 )
-from app.services.websocket_manager import plugin_two_manager
+from app.services.websocket_manager import chat_assistant_manager
 
 logger = logging.getLogger("uvicorn.error")
 
@@ -172,7 +172,7 @@ async def generate_and_dispatch_introduction(
             created_at=datetime.now().astimezone().replace(microsecond=0).isoformat(),
         )
         logger.info("[Introduction] generated task=%s", task_id)
-        await plugin_two_manager.enqueue(_model_dict(message))
+        await chat_assistant_manager.enqueue(_model_dict(message))
     except Exception:
         # 这是 evaluate 之外的附加链路；任何异常都只记录，不能反向影响岗位评估。
         logger.exception("[Introduction] generation failed task=%s", task_id)

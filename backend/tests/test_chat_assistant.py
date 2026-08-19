@@ -6,10 +6,10 @@ from app.main import app
 client = TestClient(app)
 
 
-def test_plugin_two_test_endpoint_pushes_message_and_accepts_ack():
-    with client.websocket_connect("/ws/plugin-two") as websocket:
+def test_chat_assistant_test_endpoint_pushes_message_and_accepts_ack():
+    with client.websocket_connect("/ws/chat-assistant-extension") as websocket:
         response = client.post(
-            "/api/v1/plugin-two/test",
+            "/api/v1/chat-assistant-extension/test",
             json={
                 "company_name": "治粟科技",
                 "hr_name": "朱先生",

@@ -22,6 +22,7 @@
 
   ns.CONFIG = Object.freeze({
     apiUrl: "http://127.0.0.1:8000/api/v1/jobs/evaluate",
+    bulkApiUrl: "http://127.0.0.1:8000/api/v1/jobs/bulk-evaluate",
     matchThreshold: 70,
     // Coze 工作流通常需要 60～90 秒；需长于 FastAPI 的 Coze 超时，
     // 才能让插件收到后端的成功响应或明确错误。
@@ -47,7 +48,8 @@
     debugSelectors: true,
     storageKeys: Object.freeze({
       taskState: "bossPluginTaskState",
-      processedJobs: "bossPluginProcessedJobs"
+      processedJobs: "bossPluginProcessedJobs",
+      bulkApplyEnabled: "bossPluginBulkApplyEnabled"
     })
   });
 })();

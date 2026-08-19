@@ -8,8 +8,8 @@ from fastapi import WebSocket
 logger = logging.getLogger("uvicorn.error")
 
 
-class PluginTwoConnectionManager:
-    """管理 plugin-two 连接、待处理消息和内存 ACK 状态。"""
+class ChatAssistantConnectionManager:
+    """管理聊天助手连接、待处理消息和内存 ACK 状态。"""
 
     def __init__(self) -> None:
         self._connections: set[WebSocket] = set()
@@ -22,12 +22,12 @@ class PluginTwoConnectionManager:
         async with self._lock:
             self._connections.add(websocket)
             pending = list(self._pending.values())
-        logger.info("[PluginTwoWS] connected clients=%s", len(self._connections))
+        logger.info("[ChatAssistantWS] connected clients=%s", len(self._connections))
         for payload in pending:
             try:
                 await websocket.send_json(payload)
             except Exception as exc:
-                logger.warning("[PluginTwoWS] failed to replay pending task: %s", exc)
+                logger.warning("[ChatAssistantWS] failed to replay pending task: %s", exc)
                 await self.disconnect(websocket)
                 break
 
@@ -35,7 +35,7 @@ class PluginTwoConnectionManager:
         async with self._lock:
             self._connections.discard(websocket)
             count = len(self._connections)
-        logger.info("[PluginTwoWS] disconnected clients=%s", count)
+        logger.info("[ChatAssistantWS] disconnected clients=%s", count)
 
     async def enqueue(self, payload: Dict[str, Any]) -> None:
         task_id = str(payload.get("task_id", "")).strip()
@@ -47,14 +47,14 @@ class PluginTwoConnectionManager:
             self._remember_status(task_id, "pending")
             connections = list(self._connections)
 
-        logger.info("[PluginTwoWS] pushing task %s clients=%s", task_id, len(connections))
+        logger.info("[ChatAssistantWS] pushing task %s clients=%s", task_id, len(connections))
         disconnected: List[WebSocket] = []
         for websocket in connections:
             try:
                 await websocket.send_json(payload)
             except Exception as exc:
                 logger.warning(
-                    "[PluginTwoWS] push failed task=%s error=%s", task_id, exc
+                    "[ChatAssistantWS] push failed task=%s error=%s", task_id, exc
                 )
                 disconnected.append(websocket)
         for websocket in disconnected:
@@ -71,7 +71,7 @@ class PluginTwoConnectionManager:
             self._pending.pop(normalized_task_id, None)
             self._remember_status(normalized_task_id, normalized_status)
         logger.info(
-            "[PluginTwoWS] ACK task=%s status=%s pending=%s",
+            "[ChatAssistantWS] ACK task=%s status=%s pending=%s",
             normalized_task_id,
             normalized_status,
             existed,
@@ -93,5 +93,5 @@ class PluginTwoConnectionManager:
             self._task_status.popitem(last=False)
 
 
-plugin_two_manager = PluginTwoConnectionManager()
+chat_assistant_manager = ChatAssistantConnectionManager()
 

@@ -1,8 +1,8 @@
 "use strict";
 
-globalThis.PluginTwoConfig = Object.freeze({
-  websocketUrl: "ws://127.0.0.1:8000/ws/plugin-two",
-  messageType: "PLUGIN_TWO_INTRODUCTION_READY",
+globalThis.ChatAssistantConfig = Object.freeze({
+  websocketUrl: "ws://127.0.0.1:8000/ws/chat-assistant-extension",
+  messageType: "CHAT_ASSISTANT_INTRODUCTION_READY",
   reconnectDelaysMs: Object.freeze([1000, 2000, 5000, 10000]),
   heartbeatIntervalMs: 20000,
   candidateRetryDelaysMs: Object.freeze([0, 1000, 2000, 3000, 4000, 5000]),
@@ -14,8 +14,8 @@ globalThis.PluginTwoConfig = Object.freeze({
   sendVerifyTimeoutMs: 3000,
   sendDelayMinMs: 500,
   sendDelayMaxMs: 1000,
-  processedTaskStorageKey: "pluginTwoFilledTaskIds",
-  autoSendStorageKey: "pluginTwoAutoSendEnabled",
+  processedTaskStorageKey: "chatAssistantFilledTaskIds",
+  autoSendStorageKey: "chatAssistantAutoSendEnabled",
   maxStoredTaskIds: 200,
   selectors: Object.freeze({
     contactList: Object.freeze([

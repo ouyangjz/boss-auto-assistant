@@ -80,6 +80,23 @@ def _business_job_id(payload: Dict[str, Any]) -> str:
     return "missing:" + hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
+def job_exists(
+    job_id: str,
+    *,
+    session_factory: sessionmaker = SessionLocal,
+) -> bool:
+    """Return whether a non-empty business job ID is already persisted."""
+    normalized_job_id = _string(job_id).strip()
+    if not normalized_job_id:
+        return False
+
+    try:
+        with session_factory() as session:
+            return JobRepository(session).get_by_business_id(normalized_job_id) is not None
+    except SQLAlchemyError as exc:
+        raise DatabasePersistenceError(str(exc)) from exc
+
+
 def _match_score(value: Any) -> Optional[int]:
     if value is None or value == "":
         return None

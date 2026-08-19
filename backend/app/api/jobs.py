@@ -51,3 +51,20 @@ async def evaluate_job(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"岗位数据保存失败: {exc}",
         ) from exc
+
+
+@router.post(
+    "/bulk-evaluate",
+    response_model=JobEvaluateResponse,
+    status_code=status.HTTP_200_OK,
+)
+async def bulk_evaluate_job(payload: JobPayload) -> JobEvaluateResponse:
+    """保存海投岗位并返回固定通过分，不调用任何 Coze Workflow。"""
+    try:
+        result = await JobService().bulk_evaluate(payload)
+        return result.response
+    except OSError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"岗位数据保存失败: {exc}",
+        ) from exc
