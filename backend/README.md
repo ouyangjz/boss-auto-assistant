@@ -69,6 +69,23 @@ COZE_TIMEOUT_FALLBACK_SCORE=50
 可通过 `.env` 中的 `JOB_BLACKLIST_CONFIG` 指定其他配置路径。配置会在每次评估前
 重新读取，因此修改规则无需修改 Python 源码，也无需重启服务。
 
+## 海投白名单
+
+白名单只作用于 `POST /api/v1/jobs/bulk-evaluate`，规则结构及匹配方式与黑名单一致。
+首次使用时创建个人配置：
+
+```powershell
+Copy-Item config/job_whitelist.example.json config/job_whitelist.json
+```
+
+在 `job_name_exact`、`job_name_contains` 或 `job_tag_contains` 中添加允许海投的规则。
+实际配置文件已加入 `.gitignore`，避免个人岗位偏好被提交；也可以通过 `.env` 的
+`JOB_WHITELIST_CONFIG` 指定其他路径。
+
+白名单采用安全拒绝策略：配置缺失、JSON 或字段类型错误、`enabled` 为 `false`、
+规则为空或岗位未命中时，海投接口均返回 0 分且不保存。只有命中至少一条规则才会
+保存并返回 71 分。普通 `/api/v1/jobs/evaluate` 不受白名单影响。
+
 评估接口只向 Workflow 发送 `job_name`、`job_description` 和数组形式的 `job_tags`。Coze API 应兼容 `POST {COZE_BASE_URL}/v1/workflow/run`。
 
 岗位匹配完成后的分支规则：
@@ -116,6 +133,7 @@ POST /api/v1/introductions/generate
 conda activate gluon1
 pip install -r requirements.txt
 Copy-Item .env.example .env
+Copy-Item config/job_whitelist.example.json config/job_whitelist.json
 uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 ```
 
@@ -161,7 +179,8 @@ Invoke-RestMethod -Method Post `
 POST /api/v1/jobs/bulk-evaluate
 ```
 
-它按“数据库 `job_id` 唯一性 → 黑名单”的顺序检查；通过后保存岗位、固定 71 分
-评估及按 `MATCH_THRESHOLD` 计算状态的申请记录，然后立即返回
+它按“数据库 `job_id` 唯一性 → 黑名单 → 白名单”的顺序检查；全部通过后保存岗位、
+固定 71 分评估及按 `MATCH_THRESHOLD` 计算状态的申请记录，然后立即返回
 `{"success": true, "match_score": 71}`。
-该路径不调用岗位评估 Coze，也不会调度自我介绍 Workflow。重复或黑名单岗位返回 0 分。
+该路径不调用岗位评估 Coze，也不会调度自我介绍 Workflow。重复、黑名单或未命中
+白名单的岗位均返回 0 分且不保存。

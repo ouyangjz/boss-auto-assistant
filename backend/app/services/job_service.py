@@ -7,6 +7,7 @@ from app.database.services import job_exists, save_job_result
 from app.schemas.job import JobEvaluateResponse, JobPayload
 from app.services.coze_client import CozeTimeoutError, run_job_evaluation
 from app.services.job_blacklist import check_job_blacklist
+from app.services.job_whitelist import check_job_whitelist
 
 logger = logging.getLogger("uvicorn.error")
 
@@ -128,6 +129,21 @@ class JobService:
         skipped = self._check_should_skip(payload, raw_payload)
         if skipped is not None:
             return skipped
+
+        whitelist_result = check_job_whitelist(raw_payload)
+        if not whitelist_result["matched"]:
+            logger.info(
+                "[WHITELIST SKIP] job_id=%s job=%s",
+                payload.job_id,
+                payload.job_name,
+            )
+            return self._skipped_result("not_whitelisted")
+        logger.info(
+            "[WHITELIST MATCH] job=%s rule_type=%s rule=%s",
+            payload.job_name,
+            whitelist_result["rule_type"],
+            whitelist_result["rule"],
+        )
 
         match_score = 71
         coze_output = {

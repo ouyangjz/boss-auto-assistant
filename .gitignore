@@ -8,4 +8,5 @@ __pycache__/
 backend/data/*
 !backend/data/.gitkeep
 coze/prompt
-backend\config\job_blacklist.json
+backend/config/job_blacklist.json
+backend/config/job_whitelist.json

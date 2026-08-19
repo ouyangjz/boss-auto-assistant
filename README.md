@@ -56,6 +56,7 @@ cd backend
 conda activate gluon1
 pip install -r requirements.txt
 Copy-Item .env.example .env
+Copy-Item config/job_whitelist.example.json config/job_whitelist.json
 uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 ```
 
@@ -124,7 +125,8 @@ POST http://127.0.0.1:8000/api/v1/introductions/generate
 
 两个岗位入口都会先按非空 `job_id` 查询数据库，再检查黑名单。重复岗位或黑名单
 岗位统一返回 0 分且不会继续处理。岗位筛选扩展弹窗中的“是否海投”默认关闭：关闭时
-请求 `POST /api/v1/jobs/evaluate`；开启时请求 `POST /api/v1/jobs/bulk-evaluate`，
-后者保存岗位及固定 71 分的评估结果后立即响应，不调用任何 Coze Workflow。
+请求 `POST /api/v1/jobs/evaluate`；开启时请求 `POST /api/v1/jobs/bulk-evaluate`。
+海投接口随后还会检查 `backend/config/job_whitelist.json`，只有命中白名单才保存岗位
+及固定 71 分的评估结果；未命中返回 0 分且不保存，全程不调用任何 Coze Workflow。
 
 插件使用可中断等待，避免测试过程中连续切换导致目标页面重载。间隔可在 `job-scanner-extension/config/constants.js` 中调整。

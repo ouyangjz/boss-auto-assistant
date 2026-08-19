@@ -28,6 +28,9 @@ class Settings:
     job_blacklist_config: Path = SERVER_ROOT / os.getenv(
         "JOB_BLACKLIST_CONFIG", "config/job_blacklist.json"
     )
+    job_whitelist_config: Path = SERVER_ROOT / os.getenv(
+        "JOB_WHITELIST_CONFIG", "config/job_whitelist.json"
+    )
     coze_base_url: str = os.getenv("COZE_BASE_URL", "").strip()
     coze_workflow_id: str = os.getenv("COZE_WORKFLOW_ID", "").strip()
     coze_introduction_workflow_id: str = os.getenv(

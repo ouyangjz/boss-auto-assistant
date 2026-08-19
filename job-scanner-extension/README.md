@@ -17,10 +17,11 @@ Manifest V3 Chrome 扩展。Popup 只控制任务；Content Script 串行遍历�
 Popup 中的“是否海投”默认关闭，并保存在扩展本地存储中：
 
 - 关闭：调用 `POST /api/v1/jobs/evaluate`，由后端调用 Coze 获取匹配分。
-- 开启：调用 `POST /api/v1/jobs/bulk-evaluate`，后端通过重复与黑名单检查后保存
-  岗位，固定返回 71 分，不调用 Coze。
+- 开启：调用 `POST /api/v1/jobs/bulk-evaluate`，后端依次通过重复、黑名单和白名单
+  检查后保存岗位，固定返回 71 分，不调用 Coze。
 
-两种模式遇到数据库中已经存在的 `job_id` 或黑名单岗位时都会收到 0 分并跳过沟通。
+两种模式遇到数据库中已经存在的 `job_id` 或黑名单岗位时都会收到 0 分并跳过沟通；
+海投模式未命中 `backend/config/job_whitelist.json` 时也返回 0 分且不保存。
 
 暂停会在当前岗位操作安全结束后生效；停止会取消等待器和当前循环，但不会清除已经处理的岗位 ID。若要重新测试所有岗位，可在扩展详情页清除扩展存储。
 

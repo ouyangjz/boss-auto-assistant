@@ -37,6 +37,14 @@ def persisted_payloads(monkeypatch):
         "app.services.job_service.save_job_result", fake_save_job_result
     )
     monkeypatch.setattr("app.services.job_service.job_exists", lambda _job_id: False)
+    monkeypatch.setattr(
+        "app.services.job_service.check_job_whitelist",
+        lambda _payload: {
+            "matched": True,
+            "rule_type": "job_name_contains",
+            "rule": "Python",
+        },
+    )
     return payloads
 
 
@@ -187,6 +195,24 @@ def test_bulk_evaluate_saves_fixed_score_without_calling_coze(
         }
     ]
     assert persisted_payloads.application_statuses == ["沟通"]
+
+
+def test_bulk_evaluate_returns_zero_and_does_not_save_when_not_whitelisted(
+    monkeypatch, persisted_payloads
+):
+    monkeypatch.setattr(
+        "app.services.job_service.check_job_whitelist",
+        lambda _payload: {"matched": False},
+    )
+
+    response = client.post(
+        "/api/v1/jobs/bulk-evaluate",
+        json={"job_id": "not-allowed", "job_name": "普通运营岗位"},
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {"success": True, "match_score": 0}
+    assert persisted_payloads == []
 
 
 @pytest.mark.parametrize(
