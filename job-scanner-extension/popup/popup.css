@@ -1,0 +1,26 @@
+:root {
+  color-scheme: light;
+  font-family: system-ui, "Microsoft YaHei", sans-serif;
+  color: #172329;
+  background: #f4f8f8;
+}
+
+body { margin: 0; min-width: 340px; }
+main { padding: 16px; }
+header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+h1 { margin: 0; font-size: 18px; }
+#statusBadge { padding: 4px 9px; border-radius: 999px; color: #087d7b; background: #d8f5f3; font-size: 12px; }
+.controls { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 16px 0; }
+button { border: 1px solid #cbd6d8; border-radius: 7px; padding: 9px; background: white; cursor: pointer; }
+button:hover { border-color: #00a6a7; }
+button:disabled { cursor: not-allowed; opacity: 0.5; }
+button.primary { color: white; border-color: #00a6a7; background: #00a6a7; }
+button.danger { color: #a62929; }
+.controls .clear { grid-column: 1 / -1; }
+dl { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 0; }
+dl > div { min-height: 52px; padding: 10px; border: 1px solid #e2eaea; border-radius: 7px; background: white; }
+dl > div.wide { grid-column: 1 / -1; }
+dt { color: #718084; font-size: 12px; }
+dd { margin: 6px 0 0; overflow-wrap: anywhere; font-weight: 600; }
+.error-row dd { color: #b32f2f; font-weight: 500; }
+#pageHint { min-height: 18px; margin: 10px 0 0; color: #a25b00; font-size: 12px; }

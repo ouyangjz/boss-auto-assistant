@@ -1,0 +1,103 @@
+:root {
+  color-scheme: light;
+  font-family: "Microsoft YaHei", system-ui, sans-serif;
+}
+
+body {
+  width: 310px;
+  margin: 0;
+  color: #1f2937;
+  background: #f7fbfb;
+}
+
+.panel {
+  padding: 18px;
+}
+
+h1 {
+  margin: 0;
+  color: #00a6a7;
+  font-size: 20px;
+}
+
+.description {
+  margin: 6px 0 18px;
+  color: #6b7280;
+  font-size: 13px;
+}
+
+.setting-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px;
+  border: 1px solid #dceaea;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.setting-title {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.setting-help {
+  margin-top: 4px;
+  color: #6b7280;
+  font-size: 12px;
+}
+
+.switch {
+  position: relative;
+  width: 48px;
+  height: 26px;
+  flex: 0 0 auto;
+}
+
+.switch input {
+  width: 0;
+  height: 0;
+  opacity: 0;
+}
+
+.slider {
+  position: absolute;
+  inset: 0;
+  cursor: pointer;
+  border-radius: 999px;
+  background: #cbd5e1;
+  transition: 0.2s;
+}
+
+.slider::before {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  left: 3px;
+  top: 3px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+  transition: 0.2s;
+  content: "";
+}
+
+input:checked + .slider {
+  background: #00a6a7;
+}
+
+input:checked + .slider::before {
+  transform: translateX(22px);
+}
+
+.warning {
+  margin: 14px 2px 0;
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.warning.enabled {
+  color: #b45309;
+}

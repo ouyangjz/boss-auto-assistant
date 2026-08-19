@@ -1,0 +1,10 @@
+.env
+.vscode/
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+backend/data/*
+!backend/data/.gitkeep
+coze/prompt

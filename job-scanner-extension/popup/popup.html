@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>BOSS 岗位筛选</title>
+    <link rel="stylesheet" href="popup.css">
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>BOSS 岗位筛选</h1>
+        <span id="statusBadge">空闲</span>
+      </header>
+
+      <section class="controls" aria-label="任务控制">
+        <button id="startButton" class="primary" type="button">开始</button>
+        <button id="pauseButton" type="button">暂停</button>
+        <button id="stopButton" class="danger" type="button">停止</button>
+        <button id="clearCurrentButton" class="clear" type="button">清除当前岗位信息</button>
+      </section>
+
+      <dl>
+        <div class="wide"><dt>当前岗位</dt><dd id="currentJob">—</dd></div>
+        <div><dt>已经扫描</dt><dd id="scannedCount">0</dd></div>
+        <div><dt>符合条件</dt><dd id="matchedCount">0</dd></div>
+        <div><dt>当前匹配度</dt><dd id="currentScore">—</dd></div>
+        <div class="wide error-row"><dt>最近错误</dt><dd id="lastError">无</dd></div>
+      </dl>
+      <p id="pageHint" role="status"></p>
+    </main>
+    <script src="../config/constants.js"></script>
+    <script src="popup.js"></script>
+  </body>
+</html>

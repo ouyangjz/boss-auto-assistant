@@ -1,0 +1,1144 @@
+{
+  "type": "coze-workflow-export-data",
+  "source": {
+    "workflowId": "7674197693870112768",
+    "flowMode": 0,
+    "spaceId": "7669670912534249472",
+    "isDouyin": false,
+    "host": "127.0.0.1:8888"
+  },
+  "json": {
+    "nodes": [
+      {
+        "id": "100001",
+        "type": "1",
+        "meta": {
+          "position": {
+            "x": 180,
+            "y": 40.19999999999998
+          }
+        },
+        "data": {
+          "nodeMeta": {
+            "description": "工作流的起始节点，用于设定启动工作流需要的信息",
+            "icon": "http://127.0.0.1:8888/local_storage/opencoze/default_icon/workflow_icon/icon-start.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=minioadmin%2F20260819%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260819T040209Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=c2e1b00f14a53070ca3e6a6a02bbbcc543e456861db68913f32724fb6d53a6b1",
+            "subTitle": "",
+            "title": "开始"
+          },
+          "outputs": [
+            {
+              "type": "string",
+              "name": "job_name",
+              "required": false
+            },
+            {
+              "type": "string",
+              "name": "job_description",
+              "required": true
+            },
+            {
+              "type": "list",
+              "name": "job_tags",
+              "schema": {
+                "type": "string"
+              },
+              "required": false
+            }
+          ],
+          "trigger_parameters": []
+        },
+        "_temp": {
+          "bounds": {
+            "x": 0,
+            "y": 40.19999999999998,
+            "width": 360,
+            "height": 85.3
+          },
+          "externalData": {
+            "icon": "http://127.0.0.1:8888/local_storage/opencoze/default_icon/workflow_icon/icon-start.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=minioadmin%2F20260819%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260819T040209Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=c2e1b00f14a53070ca3e6a6a02bbbcc543e456861db68913f32724fb6d53a6b1",
+            "description": "工作流的起始节点，用于设定启动工作流需要的信息",
+            "title": "开始",
+            "mainColor": "#5C62FF"
+          }
+        }
+      },
+      {
+        "id": "900001",
+        "type": "2",
+        "meta": {
+          "position": {
+            "x": 2020,
+            "y": 27.19999999999998
+          }
+        },
+        "data": {
+          "nodeMeta": {
+            "description": "工作流的最终节点，用于返回工作流运行后的结果信息",
+            "icon": "http://127.0.0.1:8888/local_storage/opencoze/default_icon/workflow_icon/icon-end.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=minioadmin%2F20260819%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260819T040209Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=7c7b80836b42604ba569b3e6356aa6f8247aaed3d3d08f708d8e769121404864",
+            "subTitle": "",
+            "title": "结束"
+          },
+          "inputs": {
+            "terminatePlan": "returnVariables",
+            "inputParameters": [
+              {
+                "name": "job_category",
+                "input": {
+                  "type": "string",
+                  "value": {
+                    "type": "ref",
+                    "content": {
+                      "source": "block-output",
+                      "blockID": "106565",
+                      "name": "job_category"
+                    },
+                    "rawMeta": {
+                      "type": 1
+                    }
+                  }
+                }
+              },
+              {
+                "name": "required_skills",
+                "input": {
+                  "type": "list",
+                  "schema": {
+                    "type": "string"
+                  },
+                  "value": {
+                    "type": "ref",
+                    "content": {
+                      "source": "block-output",
+                      "blockID": "106565",
+                      "name": "required_skills"
+                    },
+                    "rawMeta": {
+                      "type": 99
+                    }
+                  }
+                }
+              },
+              {
+                "name": "preferred_skills",
+                "input": {
+                  "type": "list",
+                  "schema": {
+                    "type": "string"
+                  },
+                  "value": {
+                    "type": "ref",
+                    "content": {
+                      "source": "block-output",
+                      "blockID": "106565",
+                      "name": "preferred_skills"
+                    },
+                    "rawMeta": {
+                      "type": 99
+                    }
+                  }
+                }
+              },
+              {
+                "name": "top_requirements",
+                "input": {
+                  "type": "list",
+                  "schema": {
+                    "type": "object",
+                    "schema": [
+                      {
+                        "type": "string",
+                        "name": "requirement"
+                      },
+                      {
+                        "type": "integer",
+                        "name": "importance"
+                      },
+                      {
+                        "type": "string",
+                        "name": "logic"
+                      },
+                      {
+                        "type": "list",
+                        "name": "alternatives",
+                        "schema": {
+                          "type": "string"
+                        }
+                      }
+                    ]
+                  },
+                  "value": {
+                    "type": "ref",
+                    "content": {
+                      "source": "block-output",
+                      "blockID": "106565",
+                      "name": "top_requirements"
+                    },
+                    "rawMeta": {
+                      "type": 103
+                    }
+                  }
+                }
+              },
+              {
+                "name": "query",
+                "input": {
+                  "type": "string",
+                  "value": {
+                    "type": "ref",
+                    "content": {
+                      "source": "block-output",
+                      "blockID": "106565",
+                      "name": "query"
+                    },
+                    "rawMeta": {
+                      "type": 1
+                    }
+                  }
+                }
+              },
+              {
+                "name": "outputList",
+                "input": {
+                  "type": "list",
+                  "schema": {
+                    "type": "object",
+                    "schema": [
+                      {
+                        "type": "string",
+                        "name": "output"
+                      }
+                    ]
+                  },
+                  "value": {
+                    "type": "ref",
+                    "content": {
+                      "source": "block-output",
+                      "blockID": "154330",
+                      "name": "outputList"
+                    },
+                    "rawMeta": {
+                      "type": 103
+                    }
+                  }
+                }
+              },
+              {
+                "name": "match_score",
+                "input": {
+                  "type": "integer",
+                  "value": {
+                    "type": "ref",
+                    "content": {
+                      "source": "block-output",
+                      "blockID": "111099",
+                      "name": "match_score"
+                    },
+                    "rawMeta": {
+                      "type": 2
+                    }
+                  }
+                }
+              },
+              {
+                "name": "summary",
+                "input": {
+                  "type": "string",
+                  "value": {
+                    "type": "ref",
+                    "content": {
+                      "source": "block-output",
+                      "blockID": "111099",
+                      "name": "summary"
+                    },
+                    "rawMeta": {
+                      "type": 1
+                    }
+                  }
+                }
+              },
+              {
+                "name": "self_intro_context",
+                "input": {
+                  "type": "list",
+                  "schema": {
+                    "type": "object",
+                    "schema": [
+                      {
+                        "type": "list",
+                        "name": "target_requirements",
+                        "schema": {
+                          "type": "string"
+                        }
+                      },
+                      {
+                        "type": "list",
+                        "name": "relevant_experiences",
+                        "schema": {
+                          "type": "object",
+                          "schema": [
+                            {
+                              "type": "string",
+                              "name": "experience"
+                            },
+                            {
+                              "type": "string",
+                              "name": "related_requirement"
+                            },
+                            {
+                              "type": "string",
+                              "name": "evidence"
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "type": "list",
+                        "name": "matched_skills",
+                        "schema": {
+                          "type": "string"
+                        }
+                      },
+                      {
+                        "type": "list",
+                        "name": "highlight_points",
+                        "schema": {
+                          "type": "string"
+                        }
+                      }
+                    ]
+                  },
+                  "value": {
+                    "type": "ref",
+                    "content": {
+                      "source": "block-output",
+                      "blockID": "111099",
+                      "name": "self_intro_context"
+                    },
+                    "rawMeta": {
+                      "type": 103
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        },
+        "_temp": {
+          "bounds": {
+            "x": 1840,
+            "y": 27.19999999999998,
+            "width": 360,
+            "height": 111.3
+          },
+          "externalData": {
+            "icon": "http://127.0.0.1:8888/local_storage/opencoze/default_icon/workflow_icon/icon-end.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=minioadmin%2F20260819%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260819T040209Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=7c7b80836b42604ba569b3e6356aa6f8247aaed3d3d08f708d8e769121404864",
+            "description": "工作流的最终节点，用于返回工作流运行后的结果信息",
+            "title": "结束",
+            "mainColor": "#5C62FF"
+          }
+        }
+      },
+      {
+        "id": "154330",
+        "type": "6",
+        "meta": {
+          "position": {
+            "x": 1100,
+            "y": 77.89999999999999
+          }
+        },
+        "data": {
+          "nodeMeta": {
+            "title": "知识库检索",
+            "icon": "http://127.0.0.1:8888/local_storage/opencoze/default_icon/workflow_icon/icon-knowledge-query.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=minioadmin%2F20260819%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260819T040209Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=a43b86da13dc96bf49da209efdc06a0d7b359a60ce33de0972c8468c15980a48",
+            "description": "在选定的知识中,根据输入变量召回最匹配的信息,并以列表形式返回",
+            "mainColor": "#FF811A",
+            "subTitle": "知识库检索"
+          },
+          "outputs": [
+            {
+              "type": "list",
+              "name": "outputList",
+              "schema": {
+                "type": "object",
+                "schema": [
+                  {
+                    "type": "string",
+                    "name": "output"
+                  }
+                ]
+              }
+            }
+          ],
+          "inputs": {
+            "datasetParam": [
+              {
+                "name": "datasetList",
+                "input": {
+                  "type": "list",
+                  "schema": {
+                    "type": "string"
+                  },
+                  "value": {
+                    "type": "literal",
+                    "content": [
+                      "7670389541512937472"
+                    ]
+                  }
+                }
+              },
+              {
+                "name": "topK",
+                "input": {
+                  "type": "integer",
+                  "value": {
+                    "type": "literal",
+                    "content": 5
+                  }
+                }
+              },
+              {
+                "name": "useRerank",
+                "input": {
+                  "type": "boolean",
+                  "value": {
+                    "type": "literal",
+                    "content": true,
+                    "rawMeta": {
+                      "type": 3
+                    }
+                  }
+                }
+              },
+              {
+                "name": "useRewrite",
+                "input": {
+                  "type": "boolean",
+                  "value": {
+                    "type": "literal",
+                    "content": true,
+                    "rawMeta": {
+                      "type": 3
+                    }
+                  }
+                }
+              },
+              {
+                "name": "isPersonalOnly",
+                "input": {
+                  "type": "boolean",
+                  "value": {
+                    "type": "literal",
+                    "content": true,
+                    "rawMeta": {
+                      "type": 3
+                    }
+                  }
+                }
+              },
+              {
+                "name": "minScore",
+                "input": {
+                  "type": "float",
+                  "value": {
+                    "type": "literal",
+                    "content": 0.5
+                  }
+                }
+              },
+              {
+                "name": "strategy",
+                "input": {
+                  "type": "integer",
+                  "value": {
+                    "type": "literal",
+                    "content": 1
+                  }
+                }
+              }
+            ],
+            "inputParameters": [
+              {
+                "name": "Query",
+                "input": {
+                  "type": "string",
+                  "value": {
+                    "type": "ref",
+                    "content": {
+                      "source": "block-output",
+                      "blockID": "106565",
+                      "name": "query"
+                    },
+                    "rawMeta": {
+                      "type": 1
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        },
+        "_temp": {
+          "bounds": {
+            "x": 920,
+            "y": 77.89999999999999,
+            "width": 360,
+            "height": 139.7
+          },
+          "externalData": {
+            "icon": "http://127.0.0.1:8888/local_storage/opencoze/default_icon/workflow_icon/icon-knowledge-query.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=minioadmin%2F20260819%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260819T040209Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=a43b86da13dc96bf49da209efdc06a0d7b359a60ce33de0972c8468c15980a48",
+            "description": "在选定的知识中,根据输入变量召回最匹配的信息,并以列表形式返回",
+            "title": "知识库检索",
+            "mainColor": "#FF811A"
+          }
+        }
+      },
+      {
+        "id": "106565",
+        "type": "3",
+        "meta": {
+          "position": {
+            "x": 640,
+            "y": -1.4210854715202004e-14
+          }
+        },
+        "data": {
+          "nodeMeta": {
+            "title": "岗位分析",
+            "icon": "http://127.0.0.1:8888/local_storage/opencoze/default_icon/workflow_icon/icon-llm.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=minioadmin%2F20260819%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260819T040209Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=711c8cb7a9538867d1c35ef870a3b048ec2fb2aea331093bc09ed84b7638fc48",
+            "description": "调用大语言模型,使用变量和提示词生成回复",
+            "mainColor": "#5C62FF",
+            "subTitle": "大模型"
+          },
+          "inputs": {
+            "inputParameters": [
+              {
+                "name": "job_context",
+                "input": {
+                  "type": "string",
+                  "value": {
+                    "type": "ref",
+                    "content": {
+                      "source": "block-output",
+                      "blockID": "100001",
+                      "name": "job_description"
+                    },
+                    "rawMeta": {
+                      "type": 1
+                    }
+                  }
+                }
+              },
+              {
+                "name": "JobName",
+                "input": {
+                  "type": "string",
+                  "value": {
+                    "type": "ref",
+                    "content": {
+                      "source": "block-output",
+                      "blockID": "100001",
+                      "name": "job_name"
+                    },
+                    "rawMeta": {
+                      "type": 1
+                    }
+                  }
+                }
+              },
+              {
+                "name": "job_tags",
+                "input": {
+                  "type": "list",
+                  "schema": {
+                    "type": "string"
+                  },
+                  "value": {
+                    "type": "ref",
+                    "content": {
+                      "source": "block-output",
+                      "blockID": "100001",
+                      "name": "job_tags"
+                    },
+                    "rawMeta": {
+                      "type": 99
+                    }
+                  }
+                }
+              }
+            ],
+            "llmParam": [
+              {
+                "name": "temperature",
+                "input": {
+                  "type": "float",
+                  "value": {
+                    "type": "literal",
+                    "content": "0.85",
+                    "rawMeta": {
+                      "type": 4
+                    }
+                  }
+                }
+              },
+              {
+                "name": "maxTokens",
+                "input": {
+                  "type": "integer",
+                  "value": {
+                    "type": "literal",
+                    "content": "2000",
+                    "rawMeta": {
+                      "type": 2
+                    }
+                  }
+                }
+              },
+              {
+                "name": "responseFormat",
+                "input": {
+                  "type": "integer",
+                  "value": {
+                    "type": "literal",
+                    "content": "2",
+                    "rawMeta": {
+                      "type": 2
+                    }
+                  }
+                }
+              },
+              {
+                "name": "modleName",
+                "input": {
+                  "type": "string",
+                  "value": {
+                    "type": "literal",
+                    "content": "DeepSeek-V3.2",
+                    "rawMeta": {
+                      "type": 1
+                    }
+                  }
+                }
+              },
+              {
+                "name": "modelType",
+                "input": {
+                  "type": "integer",
+                  "value": {
+                    "type": "literal",
+                    "content": "100003",
+                    "rawMeta": {
+                      "type": 2
+                    }
+                  }
+                }
+              },
+              {
+                "name": "generationDiversity",
+                "input": {
+                  "type": "string",
+                  "value": {
+                    "type": "literal",
+                    "content": "balance",
+                    "rawMeta": {
+                      "type": 1
+                    }
+                  }
+                }
+              },
+              {
+                "name": "prompt",
+                "input": {
+                  "type": "string",
+                  "value": {
+                    "type": "literal",
+                    "content": "岗位信息：\n\n{{job_context}}\n\n岗位名称：\n\n{{JobName}}\n\n岗位标签：\n\n{{job_tags}}",
+                    "rawMeta": {
+                      "type": 1
+                    }
+                  }
+                }
+              },
+              {
+                "name": "enableChatHistory",
+                "input": {
+                  "type": "boolean",
+                  "value": {
+                    "type": "literal",
+                    "content": false,
+                    "rawMeta": {
+                      "type": 3
+                    }
+                  }
+                }
+              },
+              {
+                "name": "chatHistoryRound",
+                "input": {
+                  "type": "integer",
+                  "value": {
+                    "type": "literal",
+                    "content": "3",
+                    "rawMeta": {
+                      "type": 2
+                    }
+                  }
+                }
+              },
+              {
+                "name": "systemPrompt",
+                "input": {
+                  "type": "string",
+                  "value": {
+                    "type": "literal",
+                    "content": "你是一名岗位需求分析助手。\n\n请分析岗位信息，提取真正影响候选人匹配度的核心要求，并生成简历知识库检索条件。\n\n## 规则\n\n1. 区分：\n- `required_skills`：真正影响岗位胜任的核心能力；\n- `preferred_skills`：优先、加分、特定平台或业务经验；\n- 忽略“责任心强、沟通能力好”等宽泛要求。\n\n2. 必须理解岗位中的逻辑关系：\n- 出现“或、或者、满足其一、A/B均可”等表达时，属于替代路径，候选人满足其中一条即可；\n- 不得把不同备选路径中的所有技能同时列为必备技能；\n- 出现“优先、加分、更佳”等表达时，原则上属于加分项。\n\n3. 不要机械拆关键词，应提取底层核心能力。\n\n例如：\n“订单拉取、数据统计、Excel报表自动生成”\n优先概括为“Python数据处理与业务自动化能力”，而不是拆成多个独立硬性要求。\n\n4. 区分技术能力与业务场景。\n例如“FastAPI/API开发”属于技术能力；“电商、抖店”属于具体业务或平台经验。除非岗位明确要求，否则不要把特定平台经验当作核心硬门槛。\n\n5. 从岗位中选出最重要的3-5项 `top_requirements`。\n\n`logic`：\n- `must`：核心要求；\n- `one_of`：多个路径满足其一即可；\n- `preferred`：加分要求。\n\n如果 `logic=\"one_of\"`，必须在 `alternatives` 中列出可接受路径；其他情况输出空数组。\n\n6. `query` 应同时包含核心技术、同类能力和工作场景关键词，以便检索到业务名称不同但技术相关的经历，不要只复制岗位原文。\n\n7. 不评价候选人，不生成招呼语，不根据候选人信息反向修改岗位要求。\n\n8. 必须只输出合法JSON，不要Markdown或额外说明。\n\n输出格式：\n\n{\n  \"job_category\": \"岗位类别\",\n  \"required_skills\": [\"核心能力1\", \"核心能力2\"],\n  \"preferred_skills\": [\"加分技能1\", \"加分技能2\"],\n  \"top_requirements\": [\n    {\n      \"requirement\": \"核心要求\",\n      \"importance\": 1到10的整数,\n      \"logic\": \"must | one_of | preferred\",\n      \"alternatives\": []\n    }\n  ],\n  \"query\": \"简历知识库检索文本\"\n}\n\n岗位信息：\n{{job_context}}\n\n岗位名称：\n{{JobName}}\n\n岗位标签：\n{{job_tags}}",
+                    "rawMeta": {
+                      "type": 1
+                    }
+                  }
+                }
+              }
+            ],
+            "settingOnError": {
+              "processType": 1,
+              "timeoutMs": 180000,
+              "retryTimes": 0
+            }
+          },
+          "outputs": [
+            {
+              "type": "string",
+              "name": "job_category"
+            },
+            {
+              "type": "list",
+              "name": "required_skills",
+              "schema": {
+                "type": "string"
+              }
+            },
+            {
+              "type": "list",
+              "name": "preferred_skills",
+              "schema": {
+                "type": "string"
+              }
+            },
+            {
+              "type": "list",
+              "name": "top_requirements",
+              "schema": {
+                "type": "object",
+                "schema": [
+                  {
+                    "type": "string",
+                    "name": "requirement"
+                  },
+                  {
+                    "type": "integer",
+                    "name": "importance"
+                  },
+                  {
+                    "type": "string",
+                    "name": "logic"
+                  },
+                  {
+                    "type": "list",
+                    "name": "alternatives",
+                    "schema": {
+                      "type": "string"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "type": "string",
+              "name": "query"
+            }
+          ],
+          "version": "3"
+        },
+        "_temp": {
+          "bounds": {
+            "x": 460,
+            "y": -1.4210854715202004e-14,
+            "width": 360,
+            "height": 165.7
+          },
+          "externalData": {
+            "icon": "http://127.0.0.1:8888/local_storage/opencoze/default_icon/workflow_icon/icon-llm.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=minioadmin%2F20260819%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260819T040209Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=711c8cb7a9538867d1c35ef870a3b048ec2fb2aea331093bc09ed84b7638fc48",
+            "description": "调用大语言模型,使用变量和提示词生成回复",
+            "title": "大模型",
+            "mainColor": "#5C62FF"
+          }
+        }
+      },
+      {
+        "id": "111099",
+        "type": "3",
+        "meta": {
+          "position": {
+            "x": 1560,
+            "y": -1.4210854715202004e-14
+          }
+        },
+        "data": {
+          "nodeMeta": {
+            "title": "岗位匹配分析",
+            "icon": "http://127.0.0.1:8888/local_storage/opencoze/default_icon/workflow_icon/icon-llm.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=minioadmin%2F20260819%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260819T040209Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=711c8cb7a9538867d1c35ef870a3b048ec2fb2aea331093bc09ed84b7638fc48",
+            "description": "调用大语言模型,使用变量和提示词生成回复",
+            "mainColor": "#5C62FF",
+            "subTitle": "大模型"
+          },
+          "inputs": {
+            "inputParameters": [
+              {
+                "name": "outputList",
+                "input": {
+                  "type": "list",
+                  "schema": {
+                    "type": "object",
+                    "schema": [
+                      {
+                        "type": "string",
+                        "name": "output"
+                      }
+                    ]
+                  },
+                  "value": {
+                    "type": "ref",
+                    "content": {
+                      "source": "block-output",
+                      "blockID": "154330",
+                      "name": "outputList"
+                    },
+                    "rawMeta": {
+                      "type": 103
+                    }
+                  }
+                }
+              },
+              {
+                "name": "top_requirements",
+                "input": {
+                  "type": "list",
+                  "schema": {
+                    "type": "object",
+                    "schema": [
+                      {
+                        "type": "string",
+                        "name": "requirement"
+                      },
+                      {
+                        "type": "integer",
+                        "name": "importance"
+                      },
+                      {
+                        "type": "string",
+                        "name": "logic"
+                      },
+                      {
+                        "type": "list",
+                        "name": "alternatives",
+                        "schema": {
+                          "type": "string"
+                        }
+                      }
+                    ]
+                  },
+                  "value": {
+                    "type": "ref",
+                    "content": {
+                      "source": "block-output",
+                      "blockID": "106565",
+                      "name": "top_requirements"
+                    },
+                    "rawMeta": {
+                      "type": 103
+                    }
+                  }
+                }
+              },
+              {
+                "name": "required_skills",
+                "input": {
+                  "type": "list",
+                  "schema": {
+                    "type": "string"
+                  },
+                  "value": {
+                    "type": "ref",
+                    "content": {
+                      "source": "block-output",
+                      "blockID": "106565",
+                      "name": "required_skills"
+                    },
+                    "rawMeta": {
+                      "type": 99
+                    }
+                  }
+                }
+              },
+              {
+                "name": "preferred_skills",
+                "input": {
+                  "type": "list",
+                  "schema": {
+                    "type": "string"
+                  },
+                  "value": {
+                    "type": "ref",
+                    "content": {
+                      "source": "block-output",
+                      "blockID": "106565",
+                      "name": "preferred_skills"
+                    },
+                    "rawMeta": {
+                      "type": 99
+                    }
+                  }
+                }
+              }
+            ],
+            "llmParam": [
+              {
+                "name": "temperature",
+                "input": {
+                  "type": "float",
+                  "value": {
+                    "type": "literal",
+                    "content": "0.85",
+                    "rawMeta": {
+                      "type": 4
+                    }
+                  }
+                }
+              },
+              {
+                "name": "maxTokens",
+                "input": {
+                  "type": "integer",
+                  "value": {
+                    "type": "literal",
+                    "content": "2000",
+                    "rawMeta": {
+                      "type": 2
+                    }
+                  }
+                }
+              },
+              {
+                "name": "responseFormat",
+                "input": {
+                  "type": "integer",
+                  "value": {
+                    "type": "literal",
+                    "content": "2",
+                    "rawMeta": {
+                      "type": 2
+                    }
+                  }
+                }
+              },
+              {
+                "name": "modleName",
+                "input": {
+                  "type": "string",
+                  "value": {
+                    "type": "literal",
+                    "content": "DeepSeek-V3.2",
+                    "rawMeta": {
+                      "type": 1
+                    }
+                  }
+                }
+              },
+              {
+                "name": "modelType",
+                "input": {
+                  "type": "integer",
+                  "value": {
+                    "type": "literal",
+                    "content": "100003",
+                    "rawMeta": {
+                      "type": 2
+                    }
+                  }
+                }
+              },
+              {
+                "name": "generationDiversity",
+                "input": {
+                  "type": "string",
+                  "value": {
+                    "type": "literal",
+                    "content": "balance",
+                    "rawMeta": {
+                      "type": 1
+                    }
+                  }
+                }
+              },
+              {
+                "name": "prompt",
+                "input": {
+                  "type": "string",
+                  "value": {
+                    "type": "literal",
+                    "content": "候选人知识库检索结果：\n\n{{outputList}}\n\n岗位核心要求：\n\n{{top_requirements}}\n\n岗位必备技能：\n\n{{required_skills}}\n\n岗位加分技能：\n\n{{preferred_skills}}",
+                    "rawMeta": {
+                      "type": 1
+                    }
+                  }
+                }
+              },
+              {
+                "name": "enableChatHistory",
+                "input": {
+                  "type": "boolean",
+                  "value": {
+                    "type": "literal",
+                    "content": false,
+                    "rawMeta": {
+                      "type": 3
+                    }
+                  }
+                }
+              },
+              {
+                "name": "chatHistoryRound",
+                "input": {
+                  "type": "integer",
+                  "value": {
+                    "type": "literal",
+                    "content": "3",
+                    "rawMeta": {
+                      "type": 2
+                    }
+                  }
+                }
+              },
+              {
+                "name": "systemPrompt",
+                "input": {
+                  "type": "string",
+                  "value": {
+                    "type": "literal",
+                    "content": "你是一名岗位匹配度分析助手。\n\n请根据候选人知识库检索结果和岗位要求，判断候选人与岗位实际工作的匹配程度，并为后续自我介绍整理最有价值的真实经历。\n\n## 基本原则\n\n1. 候选人能力只能依据 `outputList` 中明确存在的信息，不得编造项目、技能、业务经验或成果。\n\n2. 评分重点判断“候选人是否具备完成岗位工作的能力”，不要只比较项目名称、行业或工具名称是否完全一致。\n\n3. 根据 `top_requirements.importance` 判断要求权重，重要性越高影响越大。\n\n4. 根据 `logic` 判断要求：\n- `must`：重点检查；\n- `one_of`：候选人满足任意一个 `alternatives` 即可，不得因其他路径未满足而重复扣分；\n- `preferred`：属于加分项，缺失通常不应明显降低基础匹配度。\n\n## 匹配等级\n\n- `strong_match`：有直接经历证明，或底层工作逻辑高度一致；\n- `partial_match`：没有完全相同经历，但存在较强可迁移能力；\n- `weak_match`：只有较弱关联；\n- `no_evidence`：没有相关证据，也没有明显可迁移能力。\n\n## 可迁移能力\n\n技术、行业或平台名称不同，但底层能力相近时，应给予部分或较强匹配，不得直接视为缺失。\n\n例如：\n- FastAPI / REST API经验 → 可迁移至第三方平台API对接；\n- LangChain Agent / Tool Calling → 可匹配Agent工具调用和多步骤执行；\n- Workflow / Python自动化 → 可迁移至业务流程自动化；\n- Python数据处理 → 可作为订单统计、报表处理的相关基础；\n- Codex、Claude Code、Cursor等类似AI编程工具可视为同类能力。\n\n只能判断“可迁移”，不得虚构候选人已经具有具体平台经验。\n\n## 评分规则\n\n总分0-100：\n\n- 核心岗位要求 `top_requirements`：约70%\n- 核心技术 `required_skills`：约20%\n- 加分技能 `preferred_skills`：约10%\n\n不要机械按照关键词命中数量评分，应按照“能力组”判断。\n\n例如 Python、FastAPI、requests、REST API可能共同描述Python API开发能力，不能因某个具体库未出现就重复扣分。\n\n同一个缺口如果同时出现在 `top_requirements`、`required_skills` 和 `preferred_skills`，原则上只扣一次主要分数。\n\n对于高重要度要求：\n- `strong_match`：高分；\n- `partial_match`：根据迁移成本给予合理分数；\n- `no_evidence`：明显扣分。\n\n只有多个高重要度核心要求真正 `no_evidence` 时，才应明显限制总分。\n\n缺少特定行业、平台或业务经验，但核心技术已经具备时，应视为“业务场景缺口”，不能等同于核心技术缺失。\n\n## 分数参考\n\n- 90-100：核心能力几乎全部直接匹配；\n- 80-89：核心技术和主要工作高度匹配，仅缺少部分平台、业务或工具经验；\n- 70-79：主要能力基本覆盖，但仍有明显能力缺口；\n- 60-69：方向相关，但重要能力存在明显不足；\n- 40-59：仅部分相关；\n- 0-39：核心方向明显不匹配。\n\n70分表示“值得进一步沟通”，不是要求候选人已经做过完全相同的岗位。\n\n`match_score >= 70` 时建议进入后续沟通流程。\n\n## 自我介绍上下文\n\n提取2-4项与高重要度要求最相关的真实经历。\n\n可以说明某经历“与岗位具有可迁移性”，但不能将可迁移能力描述成已经具备的具体业务经验。\n\n必须只输出合法JSON，不要Markdown或额外说明。\n\n输出格式：\n\n{\n  \"match_score\": 0到100的整数,\n  \"summary\": \"整体匹配情况、主要优势及真实缺口\",\n  \"self_intro_context\": {\n    \"target_requirements\": [\n      \"重点回应的岗位要求1\",\n      \"重点回应的岗位要求2\"\n    ],\n    \"relevant_experiences\": [\n      {\n        \"experience\": \"相关经历\",\n        \"related_requirement\": \"对应岗位要求\",\n        \"evidence\": \"真实工作内容及其匹配关系\"\n      }\n    ],\n    \"matched_skills\": [\"真实匹配技能1\", \"真实匹配技能2\"],\n    \"highlight_points\": [\"最值得强调的事实1\", \"最值得强调的事实2\"]\n  }\n}\n\n候选人知识库检索结果：\n{{outputList}}\n\n岗位核心要求：\n{{top_requirements}}\n\n岗位必备技能：\n{{required_skills}}\n\n岗位加分技能：\n{{preferred_skills}}",
+                    "rawMeta": {
+                      "type": 1
+                    }
+                  }
+                }
+              }
+            ],
+            "settingOnError": {
+              "processType": 1,
+              "timeoutMs": 180000,
+              "retryTimes": 0
+            }
+          },
+          "outputs": [
+            {
+              "type": "integer",
+              "name": "match_score"
+            },
+            {
+              "type": "string",
+              "name": "summary"
+            },
+            {
+              "type": "list",
+              "name": "self_intro_context",
+              "schema": {
+                "type": "object",
+                "schema": [
+                  {
+                    "type": "list",
+                    "name": "target_requirements",
+                    "schema": {
+                      "type": "string"
+                    }
+                  },
+                  {
+                    "type": "list",
+                    "name": "relevant_experiences",
+                    "schema": {
+                      "type": "object",
+                      "schema": [
+                        {
+                          "type": "string",
+                          "name": "experience"
+                        },
+                        {
+                          "type": "string",
+                          "name": "related_requirement"
+                        },
+                        {
+                          "type": "string",
+                          "name": "evidence"
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "type": "list",
+                    "name": "matched_skills",
+                    "schema": {
+                      "type": "string"
+                    }
+                  },
+                  {
+                    "type": "list",
+                    "name": "highlight_points",
+                    "schema": {
+                      "type": "string"
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "version": "3"
+        },
+        "_temp": {
+          "bounds": {
+            "x": 1380,
+            "y": -1.4210854715202004e-14,
+            "width": 360,
+            "height": 165.7
+          },
+          "externalData": {
+            "icon": "http://127.0.0.1:8888/local_storage/opencoze/default_icon/workflow_icon/icon-llm.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=minioadmin%2F20260819%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260819T040209Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=711c8cb7a9538867d1c35ef870a3b048ec2fb2aea331093bc09ed84b7638fc48",
+            "description": "调用大语言模型,使用变量和提示词生成回复",
+            "title": "大模型",
+            "mainColor": "#5C62FF"
+          }
+        }
+      }
+    ],
+    "edges": [
+      {
+        "sourceNodeID": "100001",
+        "targetNodeID": "106565"
+      },
+      {
+        "sourceNodeID": "111099",
+        "targetNodeID": "900001"
+      },
+      {
+        "sourceNodeID": "106565",
+        "targetNodeID": "154330"
+      },
+      {
+        "sourceNodeID": "154330",
+        "targetNodeID": "111099"
+      },
+      {
+        "sourceNodeID": "106565",
+        "targetNodeID": "111099"
+      }
+    ]
+  }
+}

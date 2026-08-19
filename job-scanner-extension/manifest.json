@@ -1,0 +1,38 @@
+{
+  "manifest_version": 3,
+  "name": "BOSS 岗位自动筛选（本地测试版）",
+  "version": "1.0.0",
+  "description": "串行采集 BOSS 岗位，并通过本地 FastAPI 返回的匹配分决定是否沟通。",
+  "permissions": ["storage", "activeTab", "scripting"],
+  "host_permissions": [
+    "https://www.zhipin.com/*",
+    "http://127.0.0.1:8000/*",
+    "http://localhost:8000/*"
+  ],
+  "action": {
+    "default_title": "BOSS 岗位筛选",
+    "default_popup": "popup/popup.html"
+  },
+  "background": {
+    "service_worker": "background/background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://www.zhipin.com/web/geek/jobs*"],
+      "js": [
+        "config/constants.js",
+        "config/selectors.js",
+        "utils/logger.js",
+        "utils/dom.js",
+        "utils/storage.js",
+        "content/state-manager.js",
+        "content/job-extractor.js",
+        "content/communication.js",
+        "content/scanner.js",
+        "content/content.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ]
+}
+

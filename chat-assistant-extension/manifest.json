@@ -1,0 +1,26 @@
+{
+  "manifest_version": 3,
+  "name": "BOSS 自我介绍回填助手",
+  "version": "1.0.1",
+  "description": "接收本地 FastAPI 推送，在 BOSS 消息页定位招聘者并回填自我介绍，可由用户选择是否自动发送。",
+  "permissions": ["storage", "tabs", "scripting"],
+  "host_permissions": [
+    "https://www.zhipin.com/*",
+    "http://127.0.0.1:8000/*",
+    "http://localhost:8000/*"
+  ],
+  "action": {
+    "default_title": "BOSS 自我介绍回填助手",
+    "default_popup": "popup.html"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://www.zhipin.com/web/geek/chat*"],
+      "js": ["config.js", "content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}

@@ -1,0 +1,346 @@
+{
+  "type": "coze-workflow-export-data",
+  "source": {
+    "workflowId": "7674664857198657536",
+    "flowMode": 0,
+    "spaceId": "7669670912534249472",
+    "isDouyin": false,
+    "host": "127.0.0.1:8888"
+  },
+  "json": {
+    "nodes": [
+      {
+        "id": "100001",
+        "type": "1",
+        "meta": {
+          "position": {
+            "x": 180,
+            "y": 40.199999999999996
+          }
+        },
+        "data": {
+          "nodeMeta": {
+            "description": "工作流的起始节点，用于设定启动工作流需要的信息",
+            "icon": "http://127.0.0.1:8888/local_storage/opencoze/default_icon/workflow_icon/icon-start.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=minioadmin%2F20260819%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260819T090208Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=5383d3c7d73ae8aef6cd60f549112f50dc865b6b5e96e061be44d3e084dc1016",
+            "subTitle": "",
+            "title": "开始"
+          },
+          "outputs": [
+            {
+              "type": "string",
+              "name": "job_name",
+              "required": false
+            },
+            {
+              "type": "list",
+              "name": "self_intro_context",
+              "schema": {
+                "type": "object",
+                "schema": []
+              },
+              "required": true
+            }
+          ],
+          "trigger_parameters": []
+        },
+        "_temp": {
+          "bounds": {
+            "x": 0,
+            "y": 40.199999999999996,
+            "width": 360,
+            "height": 85.3
+          },
+          "externalData": {
+            "icon": "http://127.0.0.1:8888/local_storage/opencoze/default_icon/workflow_icon/icon-start.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=minioadmin%2F20260819%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260819T090208Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=5383d3c7d73ae8aef6cd60f549112f50dc865b6b5e96e061be44d3e084dc1016",
+            "description": "工作流的起始节点，用于设定启动工作流需要的信息",
+            "title": "开始",
+            "mainColor": "#5C62FF"
+          }
+        }
+      },
+      {
+        "id": "900001",
+        "type": "2",
+        "meta": {
+          "position": {
+            "x": 1100,
+            "y": 27.199999999999996
+          }
+        },
+        "data": {
+          "nodeMeta": {
+            "description": "工作流的最终节点，用于返回工作流运行后的结果信息",
+            "icon": "http://127.0.0.1:8888/local_storage/opencoze/default_icon/workflow_icon/icon-end.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=minioadmin%2F20260819%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260819T090208Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=22777465bf1cac34d855ec9e53a8c52501a8770e34d36bc261a7235eab8169a4",
+            "subTitle": "",
+            "title": "结束"
+          },
+          "inputs": {
+            "terminatePlan": "returnVariables",
+            "inputParameters": [
+              {
+                "name": "greeting_message",
+                "input": {
+                  "type": "string",
+                  "value": {
+                    "type": "ref",
+                    "content": {
+                      "source": "block-output",
+                      "blockID": "139563",
+                      "name": "greeting_message"
+                    },
+                    "rawMeta": {
+                      "type": 1
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        },
+        "_temp": {
+          "bounds": {
+            "x": 920,
+            "y": 27.199999999999996,
+            "width": 360,
+            "height": 111.3
+          },
+          "externalData": {
+            "icon": "http://127.0.0.1:8888/local_storage/opencoze/default_icon/workflow_icon/icon-end.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=minioadmin%2F20260819%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260819T090208Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=22777465bf1cac34d855ec9e53a8c52501a8770e34d36bc261a7235eab8169a4",
+            "description": "工作流的最终节点，用于返回工作流运行后的结果信息",
+            "title": "结束",
+            "mainColor": "#5C62FF"
+          }
+        }
+      },
+      {
+        "id": "139563",
+        "type": "3",
+        "meta": {
+          "position": {
+            "x": 640,
+            "y": 0
+          }
+        },
+        "data": {
+          "nodeMeta": {
+            "title": "大模型",
+            "icon": "http://127.0.0.1:8888/local_storage/opencoze/default_icon/workflow_icon/icon-llm.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=minioadmin%2F20260819%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260819T090208Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=c02e41e2fd95da1f56f98cff6732e649728a91fdf99e5d701998bb677a89fe3a",
+            "description": "调用大语言模型,使用变量和提示词生成回复",
+            "mainColor": "#5C62FF",
+            "subTitle": "大模型"
+          },
+          "inputs": {
+            "inputParameters": [
+              {
+                "name": "job_name",
+                "input": {
+                  "type": "string",
+                  "value": {
+                    "type": "ref",
+                    "content": {
+                      "source": "block-output",
+                      "blockID": "100001",
+                      "name": "job_name"
+                    },
+                    "rawMeta": {
+                      "type": 1
+                    }
+                  }
+                }
+              },
+              {
+                "name": "self_intro_context",
+                "input": {
+                  "type": "list",
+                  "schema": {
+                    "type": "object",
+                    "schema": []
+                  },
+                  "value": {
+                    "type": "ref",
+                    "content": {
+                      "source": "block-output",
+                      "blockID": "100001",
+                      "name": "self_intro_context"
+                    },
+                    "rawMeta": {
+                      "type": 103
+                    }
+                  }
+                }
+              }
+            ],
+            "llmParam": [
+              {
+                "name": "temperature",
+                "input": {
+                  "type": "float",
+                  "value": {
+                    "type": "literal",
+                    "content": "0.85",
+                    "rawMeta": {
+                      "type": 4
+                    }
+                  }
+                }
+              },
+              {
+                "name": "maxTokens",
+                "input": {
+                  "type": "integer",
+                  "value": {
+                    "type": "literal",
+                    "content": "2000",
+                    "rawMeta": {
+                      "type": 2
+                    }
+                  }
+                }
+              },
+              {
+                "name": "responseFormat",
+                "input": {
+                  "type": "integer",
+                  "value": {
+                    "type": "literal",
+                    "content": "2",
+                    "rawMeta": {
+                      "type": 2
+                    }
+                  }
+                }
+              },
+              {
+                "name": "modleName",
+                "input": {
+                  "type": "string",
+                  "value": {
+                    "type": "literal",
+                    "content": "DeepSeek-V3.2",
+                    "rawMeta": {
+                      "type": 1
+                    }
+                  }
+                }
+              },
+              {
+                "name": "modelType",
+                "input": {
+                  "type": "integer",
+                  "value": {
+                    "type": "literal",
+                    "content": "100003",
+                    "rawMeta": {
+                      "type": 2
+                    }
+                  }
+                }
+              },
+              {
+                "name": "generationDiversity",
+                "input": {
+                  "type": "string",
+                  "value": {
+                    "type": "literal",
+                    "content": "balance",
+                    "rawMeta": {
+                      "type": 1
+                    }
+                  }
+                }
+              },
+              {
+                "name": "prompt",
+                "input": {
+                  "type": "string",
+                  "value": {
+                    "type": "literal",
+                    "content": "岗位名称：\n\n{{job_name}}\n\n岗位及候选人匹配信息：\n\n{{self_intro_context}}",
+                    "rawMeta": {
+                      "type": 1
+                    }
+                  }
+                }
+              },
+              {
+                "name": "enableChatHistory",
+                "input": {
+                  "type": "boolean",
+                  "value": {
+                    "type": "literal",
+                    "content": false,
+                    "rawMeta": {
+                      "type": 3
+                    }
+                  }
+                }
+              },
+              {
+                "name": "chatHistoryRound",
+                "input": {
+                  "type": "integer",
+                  "value": {
+                    "type": "literal",
+                    "content": "3",
+                    "rawMeta": {
+                      "type": 2
+                    }
+                  }
+                }
+              },
+              {
+                "name": "systemPrompt",
+                "input": {
+                  "type": "string",
+                  "value": {
+                    "type": "literal",
+                    "content": "你是一名求职沟通助手。\n\n你的任务是根据输入的岗位名称，以及已经完成岗位匹配分析的 `self_intro_context`，生成一段适合在招聘平台继续与 Boss/HR 沟通时发送的个人优势介绍。\n\n候选人在发送这段内容之前，已经发送过：\n\n“Boss您好，我对您发布的职位非常感兴趣，可以把简历发给您吗？”\n\n因此，本次内容不要再次问候、表达对职位感兴趣、询问是否可以发送简历，也不要重复类似开场。直接介绍候选人与岗位最匹配的能力和项目经历。\n\n## 输入说明\n\n输入格式：\n\n{\n  \"job_name\": \"岗位名称\",\n  \"self_intro_context\": [\n    {\n      \"target_requirements\": [\n        \"岗位核心要求\"\n      ],\n      \"relevant_experiences\": [\n        {\n          \"experience\": \"项目或经历名称\",\n          \"related_requirement\": \"该经历对应的岗位要求\",\n          \"evidence\": \"能够证明匹配关系的真实经历说明\"\n        }\n      ],\n      \"matched_skills\": [\n        \"已经确认匹配的技能\"\n      ],\n      \"highlight_points\": [\n        \"最值得向HR强调的匹配亮点\"\n      ]\n    }\n  ]\n}\n\n`self_intro_context` 已经完成岗位需求与候选人经历之间的匹配分析。\n\n你不需要重新判断岗位要求，也不要重新推测候选人能力。生成内容时应优先使用其中已经提供的 `relevant_experiences`、`highlight_points` 和 `matched_skills`。\n\n## 生成规则\n\n1. 只能使用 `self_intro_context` 中明确提供的信息，不得编造项目、技能、工作年限、职责、成果、技术或数据。\n\n2. 优先围绕 `highlight_points` 和 `target_requirements` 中最核心的 1 至 2 项能力展开，不需要覆盖所有岗位要求。\n\n3. 从 `relevant_experiences` 中选择与核心要求匹配度最高的一项经历作为主要证明。\n\n4. 默认只介绍一个最相关的项目或经历。只有当这个项目无法证明第二项关键能力时，才允许补充另一项经历，并且只能简短带过。\n\n5. 最终内容不得出现两个以上的项目名称，不要连续罗列多个项目。\n\n6. 应把 `evidence` 转化成自然的第一人称表达，不要直接复制其中“这证明了……”“表明其……”等分析性语言。\n\n例如：\n\n输入 evidence：\n\n“基于LangChain构建了具有‘LLM决策 → Tool路由 → 执行 → 回传’多步骤执行链路的智能Agent，这直接证明了其理解与实现Agent工具调用和多步自动执行的能力。”\n\n生成时可以自然表达为：\n\n“在智慧校园助理项目里，我用LangChain做过Agent的工具调用和多步骤执行链路。”\n\n不要输出：\n\n“这直接证明了我具备Agent开发能力。”\n\n7. 使用具体经历证明能力，不要只写：\n\n“学习能力强”\n“认真负责”\n“沟通能力强”\n“技术能力扎实”\n\n等空泛评价。\n\n8. 不要使用“例如”“比如”“举例来说”“以XX为例”等刻意引出案例的表达。\n\n9. 不要使用：\n\n“根据岗位要求”\n“根据您的岗位描述”\n“根据匹配分析”\n“根据知识库”\n“从我的经历来看”\n\n等系统化、分析式表达。\n\n10. 不要使用：\n\n“近期”\n“最近”\n“之前”\n“此前”\n“曾经”\n“过去”\n“目前”\n\n等强调项目时间顺序的词语。\n\n11. 如果输入只说明候选人对某项能力“有相关经验”“接触过”或“了解”，不要擅自升级为：\n\n“精通”\n“熟练掌握”\n“非常擅长”\n“多年经验”\n\n等更强表述。\n\n12. 不要为了贴合岗位而强行扩展输入中不存在的业务经验。\n\n例如：\n\n如果输入只说明候选人具有“自动化工作流搭建能力”，但没有实际店铺订单处理经验，可以说明自动化流程经验与岗位场景相关，但不能声称：\n\n“做过店铺订单自动化”\n“有抖店自动化经验”\n\n13. 内容控制在 90 至 140 个中文字符左右。\n\n信息充分即可，不要为了达到长度而加入无关技术、项目或空泛评价。\n\n14. 使用第一人称和自然聊天口吻，不要写成压缩版简历。\n\n推荐使用 2 至 3 句话：\n\n第一句：\n说明与岗位最匹配的能力或项目方向。\n\n第二句：\n通过一个最相关项目说明具体做过什么。\n\n第三句：\n如确有必要，再简短补充另一项与岗位高度相关的能力或经历。\n\n不要在最终结果中输出上述结构说明。\n\n15. 尽量使用自然表达，例如：\n\n“我这边主要做过……”\n“我的经历主要集中在……”\n“在XX项目里，我主要……”\n“这个项目里我会……”\n“我平时也会……”\n\n但不要机械套用固定开头。\n\n16. 少使用连续的简历式动词，例如：\n\n“负责……实现……完成……构建……”\n\n应该转换成更自然的沟通表达。\n\n17. 除非量化成果与岗位核心要求直接相关，否则不要主动加入数字指标。\n\n18. 不要再次出现以下类型内容：\n\n“Boss您好”\n“您好”\n“我对这个职位很感兴趣”\n“我想应聘这个岗位”\n“可以把简历发给您吗”\n“希望有机会进一步沟通”\n“期待您的回复”\n\n以及其他与前一次打招呼重复的表达。\n\n19. `job_name` 仅用于帮助理解当前沟通岗位，不需要强制在生成内容中重复岗位名称。\n\n20.最终只输出合法 JSON，不得输出分析、解释、Markdown、代码块或其他文字。\n\n输出格式\n\n必须严格输出：\n\n{\n\"greeting_message\": \"生成的个人优势介绍\"\n}\n\n## 输入\n\n岗位名称：\n\n{{job_name}}\n\n岗位及候选人匹配信息：\n\n{{self_intro_context}}",
+                    "rawMeta": {
+                      "type": 1
+                    }
+                  }
+                }
+              }
+            ],
+            "settingOnError": {
+              "processType": 1,
+              "timeoutMs": 180000,
+              "retryTimes": 0
+            }
+          },
+          "outputs": [
+            {
+              "type": "string",
+              "name": "greeting_message"
+            }
+          ],
+          "version": "3"
+        },
+        "_temp": {
+          "bounds": {
+            "x": 460,
+            "y": 0,
+            "width": 360,
+            "height": 165.7
+          },
+          "externalData": {
+            "icon": "http://127.0.0.1:8888/local_storage/opencoze/default_icon/workflow_icon/icon-llm.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=minioadmin%2F20260819%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260819T090208Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=c02e41e2fd95da1f56f98cff6732e649728a91fdf99e5d701998bb677a89fe3a",
+            "description": "调用大语言模型,使用变量和提示词生成回复",
+            "title": "大模型",
+            "mainColor": "#5C62FF"
+          }
+        }
+      }
+    ],
+    "edges": [
+      {
+        "sourceNodeID": "100001",
+        "targetNodeID": "139563"
+      },
+      {
+        "sourceNodeID": "139563",
+        "targetNodeID": "900001"
+      }
+    ]
+  }
+}
