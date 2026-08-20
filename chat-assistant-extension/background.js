@@ -7,6 +7,7 @@ let socket = null;
 let reconnectAttempt = 0;
 let reconnectTimer = null;
 let heartbeatTimer = null;
+let connectionEnabled = false;
 const inFlightTaskIds = new Set();
 const contentInjectionByTabId = new Map();
 
@@ -15,15 +16,21 @@ function log(scope, message, ...details) {
 }
 
 function scheduleReconnect() {
-  if (reconnectTimer) return;
+  if (!connectionEnabled || reconnectTimer) return;
   const index = Math.min(reconnectAttempt, CONFIG.reconnectDelaysMs.length - 1);
   const delay = CONFIG.reconnectDelaysMs[index];
   reconnectAttempt += 1;
   log("WS", `reconnecting in ${delay}ms...`);
   reconnectTimer = setTimeout(() => {
     reconnectTimer = null;
-    connectWebSocket();
+    if (connectionEnabled) connectWebSocket();
   }, delay);
+}
+
+function cancelReconnect() {
+  if (reconnectTimer) clearTimeout(reconnectTimer);
+  reconnectTimer = null;
+  reconnectAttempt = 0;
 }
 
 function stopHeartbeat() {
@@ -34,10 +41,41 @@ function stopHeartbeat() {
 function startHeartbeat() {
   stopHeartbeat();
   heartbeatTimer = setInterval(() => {
-    if (socket?.readyState === WebSocket.OPEN) {
+    if (connectionEnabled && socket?.readyState === WebSocket.OPEN) {
       socket.send(JSON.stringify({ type: "ping" }));
     }
   }, CONFIG.heartbeatIntervalMs);
+}
+
+function disconnectWebSocket() {
+  cancelReconnect();
+  stopHeartbeat();
+  const activeSocket = socket;
+  socket = null;
+  if (activeSocket && [WebSocket.OPEN, WebSocket.CONNECTING].includes(activeSocket.readyState)) {
+    activeSocket.close();
+  }
+  log("WS", "connection disabled");
+}
+
+function setConnectionEnabled(enabled) {
+  const next = enabled === true;
+  if (connectionEnabled === next) {
+    if (next) connectWebSocket();
+    return;
+  }
+  connectionEnabled = next;
+  if (connectionEnabled) {
+    log("WS", "connection enabled");
+    connectWebSocket();
+  } else {
+    disconnectWebSocket();
+  }
+}
+
+async function syncConnectionPreference() {
+  const stored = await chrome.storage.local.get(CONFIG.connectionEnabledStorageKey);
+  setConnectionEnabled(stored[CONFIG.connectionEnabledStorageKey] === true);
 }
 
 async function getFilledTaskIds() {
@@ -167,23 +205,31 @@ async function handleIntroductionTask(task) {
 }
 
 function connectWebSocket() {
+  if (!connectionEnabled) return;
   if (socket && [WebSocket.OPEN, WebSocket.CONNECTING].includes(socket.readyState)) return;
 
+  let currentSocket;
   try {
-    socket = new WebSocket(CONFIG.websocketUrl);
+    currentSocket = new WebSocket(CONFIG.websocketUrl);
+    socket = currentSocket;
   } catch (error) {
     log("WS", "connection creation failed", error);
     scheduleReconnect();
     return;
   }
 
-  socket.addEventListener("open", () => {
+  currentSocket.addEventListener("open", () => {
+    if (!connectionEnabled || socket !== currentSocket) {
+      currentSocket.close();
+      return;
+    }
     reconnectAttempt = 0;
     log("WS", "connected");
     startHeartbeat();
   });
 
-  socket.addEventListener("message", (event) => {
+  currentSocket.addEventListener("message", (event) => {
+    if (!connectionEnabled || socket !== currentSocket) return;
     try {
       const message = JSON.parse(event.data);
       if (message.type === "introduction_ready") void handleIntroductionTask(message);
@@ -192,25 +238,41 @@ function connectWebSocket() {
     }
   });
 
-  socket.addEventListener("close", () => {
+  currentSocket.addEventListener("close", () => {
     log("WS", "disconnected");
-    stopHeartbeat();
-    socket = null;
-    scheduleReconnect();
+    if (socket === currentSocket) {
+      stopHeartbeat();
+      socket = null;
+      scheduleReconnect();
+    }
   });
 
-  socket.addEventListener("error", () => {
+  currentSocket.addEventListener("error", () => {
     log("WS", "connection error");
-    socket?.close();
+    currentSocket.close();
   });
 }
 
 chrome.runtime.onInstalled.addListener(async () => {
-  const stored = await chrome.storage.local.get(CONFIG.autoSendStorageKey);
-  if (typeof stored[CONFIG.autoSendStorageKey] !== "boolean") {
-    await chrome.storage.local.set({ [CONFIG.autoSendStorageKey]: false });
+  const stored = await chrome.storage.local.get([
+    CONFIG.connectionEnabledStorageKey,
+    CONFIG.autoSendStorageKey
+  ]);
+  const defaults = {};
+  if (typeof stored[CONFIG.connectionEnabledStorageKey] !== "boolean") {
+    defaults[CONFIG.connectionEnabledStorageKey] = false;
   }
-  connectWebSocket();
+  if (typeof stored[CONFIG.autoSendStorageKey] !== "boolean") {
+    defaults[CONFIG.autoSendStorageKey] = false;
+  }
+  if (Object.keys(defaults).length) await chrome.storage.local.set(defaults);
+  await syncConnectionPreference();
 });
-chrome.runtime.onStartup.addListener(connectWebSocket);
-connectWebSocket();
+chrome.runtime.onStartup.addListener(() => {
+  void syncConnectionPreference();
+});
+chrome.storage.onChanged.addListener((changes, areaName) => {
+  if (areaName !== "local" || !changes[CONFIG.connectionEnabledStorageKey]) return;
+  setConnectionEnabled(changes[CONFIG.connectionEnabledStorageKey].newValue === true);
+});
+void syncConnectionPreference();

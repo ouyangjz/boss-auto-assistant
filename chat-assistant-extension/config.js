@@ -15,6 +15,7 @@ globalThis.ChatAssistantConfig = Object.freeze({
   sendDelayMinMs: 500,
   sendDelayMaxMs: 1000,
   processedTaskStorageKey: "chatAssistantFilledTaskIds",
+  connectionEnabledStorageKey: "chatAssistantConnectionEnabled",
   autoSendStorageKey: "chatAssistantAutoSendEnabled",
   maxStoredTaskIds: 200,
   selectors: Object.freeze({

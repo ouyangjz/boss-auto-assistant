@@ -3,7 +3,8 @@
 项目包含两个 Chrome Manifest V3 插件和一个 FastAPI 后端服务：`job-scanner-extension`
 采集岗位并按匹配分决定是否沟通；高分且存在 `self_intro_context` 时，服务在响应
 岗位评估之后异步生成自我介绍，并通过 WebSocket 交给 `chat-assistant-extension` 在消息页回填。
-`chat-assistant-extension` 默认只回填；用户也可以通过插件弹窗显式开启自动发送。
+`chat-assistant-extension` 默认不连接本地服务；用户开启连接后默认只回填，也可以通过
+插件弹窗显式开启自动发送。
 
 ```text
 Popup（开始/暂停/停止、状态展示）
@@ -93,9 +94,10 @@ COZE_INTRODUCTION_WORKFLOW_ID=your-introduction-workflow-id
 COZE_INTRODUCTION_TIMEOUT_SECONDS=90
 ```
 
-在 Chrome 扩展页加载 `chat-assistant-extension`，然后打开 BOSS 消息页。插件默认连接
-`ws://127.0.0.1:8000/ws/chat-assistant-extension`。点击插件图标可切换“自动发送”，默认关闭；
-开启后会在回填复核完成后等待 0.5～1 秒再发送。可调用测试接口单独验证回填：
+在 Chrome 扩展页加载 `chat-assistant-extension`，然后打开 BOSS 消息页。插件默认不连接
+本地服务；点击插件图标将“连接本地服务”设为“是”后，才会连接
+`ws://127.0.0.1:8000/ws/chat-assistant-extension`。自动发送同样默认关闭，开启后会在回填
+复核完成后等待 0.5～1 秒再发送。可调用测试接口单独验证回填：
 
 ```powershell
 $body = @{

@@ -140,8 +140,9 @@ uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 打开 `http://127.0.0.1:8000/docs` 调试接口，或访问 `http://127.0.0.1:8000/health` 检查服务。
 
 `POST /api/v1/chat-assistant-extension/test` 可以绕过岗位分析和自我介绍 Workflow，直接向
-chat-assistant-extension 推送测试消息。扩展默认只回填；是否自动发送由插件弹窗中的本地
-开关决定。请求示例见项目根 README 和 `chat-assistant-extension/README.md`。
+chat-assistant-extension 推送测试消息。扩展默认不连接本地服务，需先在插件弹窗中开启
+连接；连接后默认只回填，是否自动发送由另一个本地开关决定。请求示例见项目根 README
+和 `chat-assistant-extension/README.md`。
 
 运行测试：
 

@@ -37,6 +37,10 @@ h1 {
   background: #fff;
 }
 
+.setting-row + .setting-row {
+  margin-top: 10px;
+}
+
 .setting-title {
   font-size: 15px;
   font-weight: 600;
@@ -91,11 +95,20 @@ input:checked + .slider::before {
   transform: translateX(22px);
 }
 
+.connection-hint,
 .warning {
   margin: 14px 2px 0;
   color: #64748b;
   font-size: 12px;
   line-height: 1.5;
+}
+
+.connection-hint.enabled {
+  color: #047857;
+}
+
+.warning {
+  margin-top: 8px;
 }
 
 .warning.enabled {

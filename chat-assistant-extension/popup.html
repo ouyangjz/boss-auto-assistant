@@ -12,6 +12,16 @@
     <p class="description">联系人匹配与自我介绍回填</p>
     <div class="setting-row">
       <div>
+        <div class="setting-title">连接本地服务</div>
+        <div id="connectionModeText" class="setting-help">否，不建立 WebSocket 连接</div>
+      </div>
+      <label class="switch" aria-label="是否连接本地服务">
+        <input id="connectionToggle" type="checkbox">
+        <span class="slider"></span>
+      </label>
+    </div>
+    <div class="setting-row">
+      <div>
         <div class="setting-title">自动发送</div>
         <div id="modeText" class="setting-help">否，仅回填输入框</div>
       </div>
@@ -20,6 +30,7 @@
         <span class="slider"></span>
       </label>
     </div>
+    <p id="connectionHint" class="connection-hint">本地服务连接已关闭，插件不会尝试建立连接。</p>
     <p id="warning" class="warning">当前不会自动发送，回填后请人工确认。</p>
   </main>
   <script src="config.js"></script>

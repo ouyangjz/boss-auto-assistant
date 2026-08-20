@@ -6,8 +6,15 @@ const path = require("node:path");
 const test = require("node:test");
 const vm = require("node:vm");
 
-function loadBackground(sendMessage, executeScript = async () => undefined) {
+function loadBackground(
+  sendMessage,
+  executeScript = async () => undefined,
+  initialStorage = {}
+) {
   const injections = [];
+  const webSockets = [];
+  const storageValues = { ...initialStorage };
+  let storageChangeListener;
   const chrome = {
     tabs: {
       query: async () => [],
@@ -21,8 +28,13 @@ function loadBackground(sendMessage, executeScript = async () => undefined) {
     },
     storage: {
       local: {
-        get: async () => ({}),
-        set: async () => undefined
+        get: async () => ({ ...storageValues }),
+        set: async (values) => Object.assign(storageValues, values)
+      },
+      onChanged: {
+        addListener(listener) {
+          storageChangeListener = listener;
+        }
       }
     },
     runtime: {
@@ -37,11 +49,21 @@ function loadBackground(sendMessage, executeScript = async () => undefined) {
 
     constructor() {
       this.readyState = FakeWebSocket.CONNECTING;
+      this.closed = false;
+      this.listeners = new Map();
+      webSockets.push(this);
     }
 
-    addEventListener() {}
+    addEventListener(type, listener) {
+      this.listeners.set(type, listener);
+    }
     send() {}
-    close() {}
+    close() {
+      if (this.closed) return;
+      this.closed = true;
+      this.readyState = 3;
+      this.listeners.get("close")?.();
+    }
   }
 
   const context = vm.createContext({
@@ -60,6 +82,7 @@ function loadBackground(sendMessage, executeScript = async () => undefined) {
       reconnectDelaysMs: [1000],
       heartbeatIntervalMs: 20000,
       processedTaskStorageKey: "processed",
+      connectionEnabledStorageKey: "connectionEnabled",
       autoSendStorageKey: "autoSend",
       maxStoredTaskIds: 200
     };
@@ -70,8 +93,48 @@ function loadBackground(sendMessage, executeScript = async () => undefined) {
     "utf8"
   );
   vm.runInContext(source, context, { filename: "background.js" });
-  return { context, injections };
+  return {
+    context,
+    injections,
+    webSockets,
+    setConnectionEnabled(enabled) {
+      const oldValue = storageValues.connectionEnabled;
+      storageValues.connectionEnabled = enabled;
+      storageChangeListener?.(
+        { connectionEnabled: { oldValue, newValue: enabled } },
+        "local"
+      );
+    }
+  };
 }
+
+test("does not create a WebSocket while connection is disabled by default", async () => {
+  const { webSockets } = loadBackground(async () => undefined);
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(webSockets.length, 0);
+});
+
+test("restores an enabled connection preference when the worker starts", async () => {
+  const { webSockets } = loadBackground(
+    async () => undefined,
+    undefined,
+    { connectionEnabled: true }
+  );
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(webSockets.length, 1);
+});
+
+test("connects only after enabling and disconnects when disabled", async () => {
+  const background = loadBackground(async () => undefined);
+  await new Promise((resolve) => setImmediate(resolve));
+
+  background.setConnectionEnabled(true);
+  assert.equal(background.webSockets.length, 1);
+  assert.equal(background.webSockets[0].closed, false);
+
+  background.setConnectionEnabled(false);
+  assert.equal(background.webSockets[0].closed, true);
+});
 
 test("injects content scripts and retries when the receiver is missing", async () => {
   let attempts = 0;
