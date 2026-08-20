@@ -11,6 +11,7 @@ RULE_TYPES = (
     "job_name_contains",
     "job_tag_contains",
 )
+RULE_TARGETS = ("job_name", "company_name", "job_description", "job_tags")
 
 FileState = Tuple[Any, ...]
 
@@ -67,6 +68,30 @@ class RuleConfigCache:
 
         if not isinstance(config, dict) or not isinstance(config.get("enabled", True), bool):
             return None, "config must be an object with a boolean enabled field"
+
+        rules = config.get("rules")
+        if rules is not None:
+            if not isinstance(rules, list):
+                return None, "rules must be an array"
+            seen_ids = set()
+            for rule in rules:
+                if not isinstance(rule, dict):
+                    return None, "each rule must be an object"
+                rule_id = rule.get("id")
+                keyword = rule.get("keyword")
+                if not isinstance(rule_id, str) or not rule_id.strip():
+                    return None, "rule id must be a non-empty string"
+                if rule_id in seen_ids:
+                    return None, "rule ids must be unique"
+                seen_ids.add(rule_id)
+                if not isinstance(keyword, str) or not keyword.strip():
+                    return None, "rule keyword must be a non-empty string"
+                if rule.get("target") not in RULE_TARGETS:
+                    return None, "rule target is invalid"
+                if rule.get("match_type") not in ("contains", "exact"):
+                    return None, "rule match_type is invalid"
+                if not isinstance(rule.get("enabled"), bool):
+                    return None, "rule enabled must be a boolean"
 
         for rule_type in RULE_TYPES:
             rules = config.get(rule_type, [])

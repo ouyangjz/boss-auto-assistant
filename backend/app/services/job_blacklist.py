@@ -4,6 +4,7 @@ from typing import Any, Dict, Mapping, Optional
 
 from app.core.config import settings
 from app.services.rule_config_cache import RuleConfigCache
+from app.services.rule_service import match_rule, rules_from_config
 
 logger = logging.getLogger("uvicorn.error")
 
@@ -31,6 +32,16 @@ def check_job_blacklist(
     config = _load_config(path)
     if not config or not config.get("enabled", True):
         return {"matched": False}
+
+    if "rules" in config:
+        rule = match_rule(job_data, rules_from_config(config, "blacklist"))
+        if rule is None:
+            return {"matched": False}
+        return {
+            "matched": True,
+            "rule_type": f"{rule.target}_{rule.match_type}",
+            "rule": rule.keyword,
+        }
 
     raw_job_name = job_data.get("job_name", "")
     job_name = _normalize(raw_job_name) if isinstance(raw_job_name, str) else ""

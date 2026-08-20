@@ -6,8 +6,9 @@ from app.core.config import settings
 from app.database.services import job_exists, save_job_result
 from app.schemas.job import JobEvaluateResponse, JobPayload
 from app.services.coze_client import CozeTimeoutError, run_job_evaluation
-from app.services.job_blacklist import check_job_blacklist
 from app.services.job_whitelist import check_job_whitelist
+from app.services.rule_service import evaluate_local_rules, get_match_threshold
+
 
 logger = logging.getLogger("uvicorn.error")
 
@@ -20,12 +21,11 @@ class JobEvaluationResult:
 
 
 class JobService:
-    """调用 Coze 评估岗位并持久化完整结果。"""
+    """按本地规则、Coze 结果和动态阈值评估并持久化岗位。"""
 
     @staticmethod
     def _raw_payload(payload: JobPayload) -> Dict[str, Any]:
         if hasattr(payload, "model_dump"):
-            # 只保存插件实际发送的字段，避免把 Schema 默认空值补进原始 JSON。
             raw_payload = payload.model_dump(exclude_unset=True)  # Pydantic 2
         else:
             raw_payload = payload.dict(exclude_unset=True)  # Pydantic 1
@@ -34,10 +34,30 @@ class JobService:
         return raw_payload
 
     @staticmethod
-    def _skipped_result(reason: str, **details: Any) -> JobEvaluationResult:
+    def _skipped_result(
+        reason: str,
+        decision_source: str,
+        *,
+        threshold: int,
+        matched_rule: Optional[Dict[str, Any]] = None,
+    ) -> JobEvaluationResult:
+        coze_output = {
+            "match_score": 0,
+            "decision_source": decision_source,
+            "reason": reason,
+            "matched_rule": matched_rule,
+        }
         return JobEvaluationResult(
-            response=JobEvaluateResponse(success=True, match_score=0),
-            coze_output={"match_score": 0, reason: True, **details},
+            response=JobEvaluateResponse(
+                success=True,
+                match_score=0,
+                should_contact=False,
+                match_threshold=threshold,
+                decision_source=decision_source,
+                reason=reason,
+                matched_rule=matched_rule,
+            ),
+            coze_output=coze_output,
             application_database_id=None,
         )
 
@@ -46,25 +66,31 @@ class JobService:
         payload: JobPayload,
         raw_payload: Dict[str, Any],
     ) -> Optional[JobEvaluationResult]:
+        threshold = get_match_threshold()
         if payload.job_id.strip() and job_exists(payload.job_id):
             logger.info(
                 "[DUPLICATE SKIP] job_id=%s job=%s",
                 payload.job_id,
                 payload.job_name,
             )
-            return self._skipped_result("duplicate")
+            return self._skipped_result(
+                "duplicate", "duplicate", threshold=threshold
+            )
 
-        blacklist_result = check_job_blacklist(raw_payload)
-        if blacklist_result["matched"]:
+        local_result = evaluate_local_rules(raw_payload)
+        if local_result["result"] == "blacklist":
+            matched_rule = local_result["matched_rule"]
             logger.info(
-                "[BLACKLIST SKIP] job=%s rule_type=%s rule=%s",
+                "[BLACKLIST SKIP] job=%s target=%s rule=%s",
                 payload.job_name,
-                blacklist_result["rule_type"],
-                blacklist_result["rule"],
+                matched_rule["target"],
+                matched_rule["keyword"],
             )
             return self._skipped_result(
-                "blacklisted",
-                blacklist_rule=blacklist_result["rule"],
+                "blacklist",
+                "blacklist",
+                threshold=threshold,
+                matched_rule=matched_rule,
             )
         return None
 
@@ -75,6 +101,40 @@ class JobService:
         skipped = self._check_should_skip(payload, raw_payload)
         if skipped is not None:
             return skipped
+
+        threshold = get_match_threshold()
+        local_result = evaluate_local_rules(raw_payload)
+        if local_result["result"] == "whitelist":
+            matched_rule = local_result["matched_rule"]
+            logger.info(
+                "[WHITELIST PASS] job=%s target=%s rule=%s",
+                payload.job_name,
+                matched_rule["target"],
+                matched_rule["keyword"],
+            )
+            # 白名单不是 AI 评分；使用当前阈值作为兼容插件的通过分。
+            match_score = threshold
+            coze_output = {
+                "match_score": match_score,
+                "decision_source": "whitelist",
+                "matched_rule": matched_rule,
+            }
+            saved = save_job_result(
+                {**raw_payload, "coze_output": coze_output},
+                application_status="沟通",
+            )
+            return JobEvaluationResult(
+                response=JobEvaluateResponse(
+                    success=True,
+                    match_score=match_score,
+                    should_contact=True,
+                    match_threshold=threshold,
+                    decision_source="whitelist",
+                    matched_rule=matched_rule,
+                ),
+                coze_output=coze_output,
+                application_database_id=saved.application_database_id,
+            )
 
         try:
             coze_output = await run_job_evaluation(
@@ -89,20 +149,17 @@ class JobService:
                 payload.job_name,
                 fallback_score,
             )
-            # 保留降级原因，避免默认分数被误认为 Coze 的真实评估结果。
             coze_output = {
                 "match_score": fallback_score,
                 "fallback": True,
                 "fallback_reason": "COZE_TIMEOUT",
             }
-        match_score = coze_output["match_score"]
-        result_payload = {**raw_payload, "coze_output": coze_output}
-        application_status = (
-            "沟通" if int(match_score) >= settings.match_threshold else "未投递"
-        )
+        match_score = int(coze_output["match_score"])
+        should_contact = match_score >= threshold
+        coze_output = {**coze_output, "decision_source": "coze"}
         saved = save_job_result(
-            result_payload,
-            application_status=application_status,
+            {**raw_payload, "coze_output": coze_output},
+            application_status="沟通" if should_contact else "未投递",
         )
 
         logger.info("Match score: %s", match_score)
@@ -111,11 +168,13 @@ class JobService:
             saved.job_database_id,
             saved.evaluation_database_id,
         )
-
         return JobEvaluationResult(
             response=JobEvaluateResponse(
                 success=True,
                 match_score=match_score,
+                should_contact=should_contact,
+                match_threshold=threshold,
+                decision_source="coze",
             ),
             coze_output=coze_output,
             application_database_id=saved.application_database_id,
@@ -130,6 +189,7 @@ class JobService:
         if skipped is not None:
             return skipped
 
+        threshold = get_match_threshold()
         whitelist_result = check_job_whitelist(raw_payload)
         if not whitelist_result["matched"]:
             logger.info(
@@ -137,7 +197,9 @@ class JobService:
                 payload.job_id,
                 payload.job_name,
             )
-            return self._skipped_result("not_whitelisted")
+            return self._skipped_result(
+                "not_whitelisted", "bulk_filter", threshold=threshold
+            )
         logger.info(
             "[WHITELIST MATCH] job=%s rule_type=%s rule=%s",
             payload.job_name,
@@ -150,12 +212,11 @@ class JobService:
             "match_score": match_score,
             "bulk_apply": True,
             "evaluation_source": "bulk_apply_default",
+            "decision_source": "whitelist",
         }
         saved = save_job_result(
             {**raw_payload, "coze_output": coze_output},
-            application_status=(
-                "沟通" if match_score >= settings.match_threshold else "未投递"
-            ),
+            application_status="沟通",
         )
         logger.info(
             "Saved bulk-application result: job_db_id=%s evaluation_db_id=%s",
@@ -163,7 +224,13 @@ class JobService:
             saved.evaluation_database_id,
         )
         return JobEvaluationResult(
-            response=JobEvaluateResponse(success=True, match_score=match_score),
+            response=JobEvaluateResponse(
+                success=True,
+                match_score=match_score,
+                should_contact=True,
+                match_threshold=threshold,
+                decision_source="whitelist",
+            ),
             coze_output=coze_output,
             application_database_id=saved.application_database_id,
         )

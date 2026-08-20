@@ -10,6 +10,7 @@ backend/data/*
 coze/prompt
 backend/config/job_blacklist.json
 backend/config/job_whitelist.json
+backend/config/job_settings.json
 frontend/node_modules/
 frontend/dist/
 frontend/*.tsbuildinfo

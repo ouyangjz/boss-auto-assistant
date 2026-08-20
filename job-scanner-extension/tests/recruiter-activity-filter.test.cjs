@@ -64,9 +64,15 @@ test("classifies recruiter activity at the three-day boundary", () => {
   assert.equal(parseRecruiterActivity("活跃时间未知").withinAllowedRange, null);
 });
 
-function createScanner(activity) {
+function createScanner(activity, evaluation = {
+  match_score: 65,
+  match_threshold: 70,
+  should_contact: false,
+  decision_source: "coze"
+}) {
   let apiRequestCount = 0;
   let extractJobCount = 0;
+  let communicateCount = 0;
   const persisted = [];
   const ns = {
     STATES: {
@@ -103,7 +109,7 @@ function createScanner(activity) {
         return { job_id: "job-1", job_name: "测试岗位", job_description: "岗位描述" };
       }
     },
-    communication: { async communicate() {} }
+    communication: { async communicate() { communicateCount += 1; } }
   };
   const context = vm.createContext({
     AbortController,
@@ -114,7 +120,7 @@ function createScanner(activity) {
         lastError: null,
         sendMessage(_message, callback) {
           apiRequestCount += 1;
-          callback({ ok: true, data: { match_score: 65 } });
+          callback({ ok: true, data: evaluation });
         }
       }
     },
@@ -142,6 +148,7 @@ function createScanner(activity) {
     state,
     getApiRequestCount: () => apiRequestCount,
     getExtractJobCount: () => extractJobCount,
+    getCommunicateCount: () => communicateCount,
     persisted
   };
 }
@@ -185,4 +192,25 @@ test("keeps the original FastAPI flow for activity within three days", async () 
   assert.equal(harness.getExtractJobCount(), 1);
   assert.equal(harness.state.value.scannedCount, 1);
   assert.equal(harness.state.value.currentScore, 65);
+});
+
+test("uses the backend decision instead of a hardcoded score threshold", async () => {
+  const harness = createScanner(
+    { text: "在线", withinAllowedRange: true },
+    {
+      match_score: 60,
+      match_threshold: 60,
+      should_contact: true,
+      decision_source: "coze"
+    }
+  );
+
+  await harness.scanner.processOne(
+    connectedCard(),
+    { jobId: "job-1", title: "测试岗位" },
+    new AbortController().signal
+  );
+
+  assert.equal(harness.getCommunicateCount(), 1);
+  assert.equal(harness.state.value.matchedCount, 1);
 });

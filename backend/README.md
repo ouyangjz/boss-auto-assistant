@@ -4,8 +4,8 @@
 
 数据库使用 SQLAlchemy，默认连接为 `sqlite:///data/jobs.db`。如需覆盖（例如以后切换 PostgreSQL），可在 `.env` 设置 `DATABASE_URL`。服务启动时只创建缺失的数据表，不会自动导入历史 JSON。
 
-实时岗位分析会为每个岗位维护一条 `applications` 记录。匹配分达到当前
-`MATCH_THRESHOLD`（默认 70）时状态为 `沟通`，否则为 `未投递`；已经由前端确认
+实时岗位分析会为每个岗位维护一条 `applications` 记录。匹配分达到管理页当前的
+`match_threshold`（未保存时使用 `MATCH_THRESHOLD`，默认 70）时状态为 `沟通`，否则为 `未投递`；已经由前端确认
 为 `投递简历`、`面试阶段` 或 `入职阶段` 的记录不会被后续重新分析降级。高分岗位的
 后台自我介绍 Workflow 成功返回后，首次生成的沟通语会写入 `communications`，后续
 重复生成不会覆盖首次记录。
@@ -37,12 +37,17 @@ COZE_TIMEOUT_FALLBACK_SCORE=50
 ## 岗位黑名单
 
 服务会在调用 Coze 和保存岗位数据之前读取
-`config/job_blacklist.json`。命中规则时返回原有响应结构：
+`config/job_blacklist.json`。命中规则时返回向后兼容的评分字段，并附带明确决策：
 
 ```json
 {
   "success": true,
-  "match_score": 0
+  "match_score": 0,
+  "should_contact": false,
+  "match_threshold": 70,
+  "decision_source": "blacklist",
+  "reason": "blacklist",
+  "matched_rule": {"keyword": "Java", "target": "job_name"}
 }
 ```
 
@@ -69,9 +74,9 @@ COZE_TIMEOUT_FALLBACK_SCORE=50
 可通过 `.env` 中的 `JOB_BLACKLIST_CONFIG` 指定其他配置路径。每次评估只检查文件
 状态，文件发生变化时才重新读取；有效修改无需重启服务即可生效。
 
-## 海投白名单
+## 白名单
 
-白名单只作用于 `POST /api/v1/jobs/bulk-evaluate`，规则结构及匹配方式与黑名单一致。
+白名单同时作用于普通评估和 `POST /api/v1/jobs/bulk-evaluate`，规则结构及匹配方式与黑名单一致。
 首次使用时创建个人配置：
 
 ```powershell
@@ -85,14 +90,22 @@ Copy-Item config/job_whitelist.example.json config/job_whitelist.json
 白名单采用安全拒绝策略，并缓存最后一份有效配置。文件发生变化时才重新读取；新
 文件无效时继续使用缓存。若服务启动后从未成功加载过配置，则配置缺失、JSON 或字段
 类型错误都会拒绝海投；`enabled` 为 `false`、规则为空或岗位未命中时也返回 0 分且
-不保存。只有命中至少一条规则才会保存并返回 71 分。普通 `/api/v1/jobs/evaluate`
-不受白名单影响。
+不保存。海投接口只有命中至少一条规则才会保存并返回 71 分；普通
+`/api/v1/jobs/evaluate` 在未命中黑名单且命中白名单时跳过 Coze，直接按规则通过并保存。
+
+## 管理 API
+
+前端 `/management` 通过 `/api/v1/management` 读取和维护动态阈值、黑名单与白名单。
+规则新增、编辑、删除和启停会原子写入现有黑白名单文件；阈值写入
+`config/job_settings.json`。保存后缓存立即刷新，后续岗位无需重启服务即可使用新配置。
+旧版 `job_name_exact`、`job_name_contains`、`job_tag_contains` 数组仍可读取，首次通过
+管理页修改时会转换成带稳定 ID 和独立启停状态的新格式。
 
 评估接口只向 Workflow 发送 `job_name`、`job_description` 和数组形式的 `job_tags`。Coze API 应兼容 `POST {COZE_BASE_URL}/v1/workflow/run`。
 
 岗位匹配完成后的分支规则：
 
-- `match_score < MATCH_THRESHOLD`：只返回原有评分响应。
+- `match_score < match_threshold`：返回不沟通决策，不生成自我介绍。
 - 分数达标但 `self_intro_context` 为空、为 `null` 或缺失：job-scanner-extension 仍可沟通，
   但服务不生成自我介绍。
 - 分数达标且上下文非空：服务把任务加入 FastAPI `BackgroundTasks`，保持原有
@@ -185,7 +198,7 @@ POST /api/v1/jobs/bulk-evaluate
 ```
 
 它按“数据库 `job_id` 唯一性 → 黑名单 → 白名单”的顺序检查；全部通过后保存岗位、
-固定 71 分评估及按 `MATCH_THRESHOLD` 计算状态的申请记录，然后立即返回
+固定 71 分评估及白名单通过状态的申请记录，然后立即返回
 `{"success": true, "match_score": 71}`。
 该路径不调用岗位评估 Coze，也不会调度自我介绍 Workflow。重复、黑名单或未命中
 白名单的岗位均返回 0 分且不保存。

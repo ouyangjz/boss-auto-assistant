@@ -17,6 +17,17 @@ from app.services.coze_client import CozeResponseError, CozeTimeoutError
 client = TestClient(app)
 
 
+def assert_decision(response, score, should_contact, source, reason=None):
+    body = response.json()
+    assert body["success"] is True
+    assert body["match_score"] == score
+    assert body["match_threshold"] == 70
+    assert body["should_contact"] is should_contact
+    assert body["decision_source"] == source
+    if reason is not None:
+        assert body["reason"] == reason
+
+
 @pytest.fixture(autouse=True)
 def persisted_payloads(monkeypatch):
     class PersistenceCalls(list):
@@ -86,7 +97,7 @@ def test_evaluate_returns_coze_score_and_saves_complete_output(
         },
     )
     assert response.status_code == 200
-    assert response.json() == {"success": True, "match_score": 83}
+    assert_decision(response, 83, True, "coze")
     assert received == {
         "job_name": "AI Agent 工程师",
         "job_description": "第一行\n第二行",
@@ -104,6 +115,7 @@ def test_evaluate_returns_coze_score_and_saves_complete_output(
         "match_score": 83,
         "outputList": [{"name": "Python"}],
         "summary": "匹配",
+        "decision_source": "coze",
     }
     assert "location" not in saved
     assert persisted_payloads.application_statuses == ["沟通"]
@@ -134,7 +146,7 @@ def test_blacklisted_job_returns_zero_without_calling_coze_or_saving(
     )
 
     assert response.status_code == 200
-    assert response.json() == {"success": True, "match_score": 0}
+    assert_decision(response, 0, False, "blacklist", "blacklist")
     assert persisted_payloads == []
 
 
@@ -156,7 +168,7 @@ def test_existing_job_returns_zero_without_calling_coze_or_saving(
     )
 
     assert response.status_code == 200
-    assert response.json() == {"success": True, "match_score": 0}
+    assert_decision(response, 0, False, "duplicate", "duplicate")
     assert persisted_payloads == []
 
 
@@ -181,7 +193,7 @@ def test_bulk_evaluate_saves_fixed_score_without_calling_coze(
     )
 
     assert response.status_code == 200
-    assert response.json() == {"success": True, "match_score": 71}
+    assert_decision(response, 71, True, "whitelist")
     assert persisted_payloads == [
         {
             "job_id": "bulk-job",
@@ -191,6 +203,7 @@ def test_bulk_evaluate_saves_fixed_score_without_calling_coze(
                 "match_score": 71,
                 "bulk_apply": True,
                 "evaluation_source": "bulk_apply_default",
+                "decision_source": "whitelist",
             },
         }
     ]
@@ -211,7 +224,7 @@ def test_bulk_evaluate_returns_zero_and_does_not_save_when_not_whitelisted(
     )
 
     assert response.status_code == 200
-    assert response.json() == {"success": True, "match_score": 0}
+    assert_decision(response, 0, False, "bulk_filter", "not_whitelisted")
     assert persisted_payloads == []
 
 
@@ -236,7 +249,9 @@ def test_bulk_evaluate_skips_duplicates_and_blacklist(
     )
 
     assert response.status_code == 200
-    assert response.json() == {"success": True, "match_score": 0}
+    expected_source = "duplicate" if job_id == "already-saved" else "blacklist"
+    expected_reason = "duplicate" if job_id == "already-saved" else "blacklist"
+    assert_decision(response, 0, False, expected_source, expected_reason)
     assert persisted_payloads == []
 
 
@@ -266,7 +281,7 @@ def test_protected_ai_job_continues_to_coze(monkeypatch, tmp_path):
     )
 
     assert response.status_code == 200
-    assert response.json() == {"success": True, "match_score": 88}
+    assert_decision(response, 88, True, "coze")
     assert len(calls) == 1
     assert calls[0]["job_name"] == "AI应用开发工程师"
 
@@ -321,7 +336,7 @@ def test_evaluate_uses_fallback_score_and_saves_result_on_coze_timeout(
     )
 
     assert response.status_code == 200
-    assert response.json() == {"success": True, "match_score": 50}
+    assert_decision(response, 50, False, "coze")
     assert len(persisted_payloads) == 1
     saved = persisted_payloads[0]
     assert saved["job_id"] == "timeout-job"
@@ -329,6 +344,7 @@ def test_evaluate_uses_fallback_score_and_saves_result_on_coze_timeout(
         "match_score": 50,
         "fallback": True,
         "fallback_reason": "COZE_TIMEOUT",
+        "decision_source": "coze",
     }
     assert persisted_payloads.application_statuses == ["未投递"]
 
@@ -382,7 +398,7 @@ def test_evaluate_schedules_introduction_only_for_high_score_with_context(
     )
 
     assert response.status_code == 200
-    assert response.json() == {"success": True, "match_score": 82}
+    assert_decision(response, 82, True, "coze")
     assert len(scheduled) == 1
     assert scheduled[0].company_name == "示例科技"
     assert scheduled[0].self_intro_context[0]["matched_skills"] == ["Python"]
@@ -419,7 +435,7 @@ def test_evaluate_does_not_schedule_for_low_score_even_with_context(
     )
 
     assert response.status_code == 200
-    assert response.json() == {"success": True, "match_score": 69}
+    assert_decision(response, 69, False, "coze")
     assert scheduled == []
 
 
@@ -448,7 +464,7 @@ def test_evaluate_does_not_schedule_when_context_is_empty(monkeypatch, tmp_path)
     )
 
     assert response.status_code == 200
-    assert response.json() == {"success": True, "match_score": 85}
+    assert_decision(response, 85, True, "coze")
     assert scheduled == []
 
 
@@ -471,7 +487,70 @@ def test_invalid_introduction_context_does_not_fail_evaluate(monkeypatch, tmp_pa
     )
 
     assert response.status_code == 200
-    assert response.json() == {"success": True, "match_score": 85}
+    assert_decision(response, 85, True, "coze")
+
+
+def test_whitelist_passes_without_calling_coze(monkeypatch, persisted_payloads):
+    async def fail_if_called(**kwargs):
+        raise AssertionError("whitelisted job must not call Coze")
+
+    monkeypatch.setattr(
+        "app.services.job_service.evaluate_local_rules",
+        lambda _payload: {
+            "result": "whitelist",
+            "matched_rule": {
+                "id": "rule-white",
+                "keyword": "AI应用开发",
+                "target": "job_name",
+                "match_type": "contains",
+                "enabled": True,
+            },
+        },
+    )
+    monkeypatch.setattr(
+        "app.services.job_service.run_job_evaluation", fail_if_called
+    )
+
+    response = client.post(
+        "/api/v1/jobs/evaluate",
+        json={"job_id": "white-1", "job_name": "AI应用开发工程师"},
+    )
+
+    assert_decision(response, 70, True, "whitelist")
+    assert response.json()["matched_rule"]["keyword"] == "AI应用开发"
+    assert persisted_payloads.application_statuses == ["沟通"]
+
+
+@pytest.mark.parametrize(("score", "should_contact"), [(79, False), (80, True)])
+def test_evaluate_uses_dynamic_match_threshold(
+    monkeypatch, persisted_payloads, score, should_contact
+):
+    async def fake_run_job_evaluation(**kwargs):
+        return {"match_score": score}
+
+    monkeypatch.setattr(
+        "app.services.job_service.evaluate_local_rules",
+        lambda _payload: {"result": "unmatched", "matched_rule": None},
+    )
+    monkeypatch.setattr("app.services.job_service.get_match_threshold", lambda: 80)
+    monkeypatch.setattr(
+        "app.services.introduction_service.get_match_threshold", lambda: 80
+    )
+    monkeypatch.setattr(
+        "app.services.job_service.run_job_evaluation", fake_run_job_evaluation
+    )
+
+    response = client.post(
+        "/api/v1/jobs/evaluate",
+        json={"job_id": f"threshold-{score}", "job_name": "阈值测试岗位"},
+    )
+
+    body = response.json()
+    assert body["match_threshold"] == 80
+    assert body["should_contact"] is should_contact
+    assert persisted_payloads.application_statuses == [
+        "沟通" if should_contact else "未投递"
+    ]
 
 
 def test_realtime_flow_persists_status_and_first_communication(monkeypatch, tmp_path):
@@ -528,7 +607,7 @@ def test_realtime_flow_persists_status_and_first_communication(monkeypatch, tmp_
     )
 
     assert response.status_code == 200
-    assert response.json() == {"success": True, "match_score": 85}
+    assert_decision(response, 85, True, "coze")
     with sessions() as session:
         application = session.scalar(select(Application))
         communication = session.scalar(select(Communication))

@@ -16,6 +16,7 @@ router = APIRouter()
 @router.post(
     "/evaluate",
     response_model=JobEvaluateResponse,
+    response_model_exclude_none=True,
     status_code=status.HTTP_200_OK,
 )
 async def evaluate_job(
@@ -56,6 +57,7 @@ async def evaluate_job(
 @router.post(
     "/bulk-evaluate",
     response_model=JobEvaluateResponse,
+    response_model_exclude_none=True,
     status_code=status.HTTP_200_OK,
 )
 async def bulk_evaluate_job(payload: JobPayload) -> JobEvaluateResponse:

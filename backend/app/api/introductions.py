@@ -1,11 +1,11 @@
 from fastapi import APIRouter, BackgroundTasks, HTTPException, status
 
-from app.core.config import settings
 from app.schemas.introduction import (
     IntroductionGenerateResponse,
     IntroductionTaskContext,
 )
 from app.services.introduction_service import schedule_introduction_generation
+from app.services.rule_service import get_match_threshold
 
 router = APIRouter()
 
@@ -20,11 +20,12 @@ async def generate_introduction(
     background_tasks: BackgroundTasks,
 ) -> IntroductionGenerateResponse:
     """独立调度 Coze 自我介绍 Workflow，并在完成后推送聊天助手。"""
-    if payload.match_score < settings.match_threshold:
+    threshold = get_match_threshold()
+    if payload.match_score < threshold:
         raise HTTPException(
             status_code=422,
             detail=(
-                f"match_score 必须大于等于阈值 {settings.match_threshold}"
+                f"match_score 必须大于等于阈值 {threshold}"
             ),
         )
     if not payload.self_intro_context:

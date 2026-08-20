@@ -279,12 +279,17 @@
         if (!Number.isFinite(score) || score < 0 || score > 100) {
           throw new Error("INVALID_MATCH_SCORE");
         }
-        const matched = score >= ns.CONFIG.matchThreshold;
+        const threshold = Number(response.data?.match_threshold);
+        const shouldContact = response.data?.should_contact;
+        if (!Number.isFinite(threshold) || threshold < 0 || threshold > 100 || typeof shouldContact !== "boolean") {
+          throw new Error("INVALID_EVALUATION_DECISION");
+        }
+        const matched = shouldContact;
         await this.state.patch({
           currentScore: score,
           matchedCount: this.state.value.matchedCount + (matched ? 1 : 0)
         });
-        ns.logger.info(`FastAPI match_score = ${score}`);
+        ns.logger.info(`FastAPI match_score = ${score}, threshold = ${threshold}, source = ${response.data?.decision_source || "unknown"}`);
 
         if (matched) {
           await this.state.transition(ns.STATES.COMMUNICATING);

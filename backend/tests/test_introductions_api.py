@@ -1,5 +1,3 @@
-from types import SimpleNamespace
-
 from fastapi.testclient import TestClient
 
 from app.main import app
@@ -15,10 +13,7 @@ def test_generate_introduction_endpoint_schedules_background_task(monkeypatch):
         scheduled.append(context)
         return "intro-task-123"
 
-    monkeypatch.setattr(
-        "app.api.introductions.settings",
-        SimpleNamespace(match_threshold=70),
-    )
+    monkeypatch.setattr("app.api.introductions.get_match_threshold", lambda: 70)
     monkeypatch.setattr(
         "app.api.introductions.schedule_introduction_generation",
         fake_schedule,
@@ -53,10 +48,7 @@ def test_generate_introduction_endpoint_schedules_background_task(monkeypatch):
 
 
 def test_generate_introduction_endpoint_rejects_low_score(monkeypatch):
-    monkeypatch.setattr(
-        "app.api.introductions.settings",
-        SimpleNamespace(match_threshold=70),
-    )
+    monkeypatch.setattr("app.api.introductions.get_match_threshold", lambda: 70)
 
     response = client.post(
         "/api/v1/introductions/generate",
@@ -72,10 +64,7 @@ def test_generate_introduction_endpoint_rejects_low_score(monkeypatch):
 
 
 def test_generate_introduction_endpoint_rejects_empty_context(monkeypatch):
-    monkeypatch.setattr(
-        "app.api.introductions.settings",
-        SimpleNamespace(match_threshold=70),
-    )
+    monkeypatch.setattr("app.api.introductions.get_match_threshold", lambda: 70)
 
     response = client.post(
         "/api/v1/introductions/generate",

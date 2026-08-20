@@ -6,7 +6,7 @@ const route = useRoute()
 const navigation = [
   { label: '投递总览', path: '/jobs', icon: '▦' },
   { label: '岗位分析', path: '/analysis', icon: '⌁' },
-  { label: '管理功能', path: '/management', icon: '⚙' },
+  { label: '管理', path: '/management', icon: '⚙' },
 ]
 
 function isActive(path: string) {

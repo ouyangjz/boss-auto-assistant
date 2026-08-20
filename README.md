@@ -176,6 +176,7 @@ boss-auto-assistant/
 │   │   │   ├── introduction_service.py # 自我介绍后台任务
 │   │   │   ├── websocket_manager.py # 连接、pending 与 ACK
 │   │   │   ├── analysis_service.py  # 聚合统计、去重与 Top N
+│   │   │   ├── rule_service.py      # 规则管理、原子保存与动态阈值
 │   │   │   ├── job_blacklist.py     # 黑名单规则
 │   │   │   └── job_whitelist.py     # 批量模式白名单规则
 │   │   └── main.py                  # FastAPI 应用入口
@@ -324,6 +325,7 @@ APP_NAME=BOSS Job Evaluator
 HOST=127.0.0.1
 PORT=8000
 MATCH_THRESHOLD=70
+JOB_SETTINGS_CONFIG=config/job_settings.json
 
 # 数据
 DATA_DIR=data
@@ -451,11 +453,12 @@ Frontend Build:           passed
 POST /api/v1/jobs/evaluate
   -> JobService.evaluate
     -> ① 按 job_id 查询数据库，跳过重复岗位
-    -> ② 检查本地黑名单
-    -> ③ CozeClient 调用岗位匹配 Workflow
-    -> ④ 解析 match_score、岗位要求和 self_intro_context
-    -> ⑤ SQLAlchemy 事务化保存岗位、评估和申请状态
-    -> ⑥ 返回匹配分
+    -> ② 检查本地黑名单（命中直接跳过）
+    -> ③ 检查本地白名单（命中直接通过）
+    -> ④ 未命中规则时调用 Coze Workflow
+    -> ⑤ 按动态 match_threshold 判断是否沟通
+    -> ⑥ SQLAlchemy 事务化保存岗位、评估和申请状态
+    -> ⑦ 返回匹配分和后端决策
     -> ⑦ 高匹配且上下文完整时，后台调度自我介绍生成
 ```
 
@@ -550,7 +553,7 @@ POST /api/v1/jobs/bulk-evaluate
 - 🚧 **分析能力扩展**
   在现有岗位、分数、类别和技能聚合基础上，增加各阶段转化和公司维度统计。
 - 🚧 **规则可视化配置**
-  在管理页面维护黑名单、白名单、匹配阈值和扩展运行参数，减少手工编辑 JSON。
+  在管理页面维护黑名单、白名单和匹配阈值，减少手工编辑 JSON。
 - 🚧 **Docker 与 CI/CD**
   增加 Docker Compose、本地一键启动和 GitHub Actions，自动运行后端、扩展与前端验证。
 - 🚧 **可观测性**

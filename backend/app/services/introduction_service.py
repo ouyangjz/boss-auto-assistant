@@ -18,6 +18,7 @@ from app.services.coze_client import (
     CozeTimeoutError,
 )
 from app.services.websocket_manager import chat_assistant_manager
+from app.services.rule_service import get_match_threshold
 
 logger = logging.getLogger("uvicorn.error")
 
@@ -202,7 +203,7 @@ def schedule_introduction_for_evaluation(
 ) -> Optional[str]:
     """按岗位评估结果决定是否异步进入独立自我介绍链路。"""
     match_score = int(coze_output["match_score"])
-    threshold = settings.match_threshold
+    threshold = get_match_threshold()
     if match_score < threshold:
         logger.info(
             "[Evaluate] score=%s < threshold=%s, skip introduction generation",
