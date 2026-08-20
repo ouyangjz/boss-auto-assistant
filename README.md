@@ -13,6 +13,7 @@ BOSS AI 求职助手是一个围绕真实求职流程设计的个人全栈项目
 <summary><strong>查看版本更新记录（最新：2026-08-20）</strong></summary>
 
 - `2026-08-20`
+  - 岗位分析：新增 `/analysis` 页面和聚合 API，支持日期、类别、匹配度、投递状态筛选，以及分数、类别、技能、要求、优势和缺口统计。
   - 规则配置：黑名单与白名单增加文件状态缓存，配置未变化时不重复读取，配置损坏时继续使用上一份有效缓存。
   - 岗位筛选：新增招聘者活跃度判断，明确超过 3 天的岗位在调用后端前直接跳过。
   - 连接控制：消息回填扩展新增 WebSocket 连接开关，连接与自动发送均保持默认关闭。
@@ -40,7 +41,8 @@ BOSS AI 求职助手是一个围绕真实求职流程设计的个人全栈项目
 - 💾 **结构化数据建模**：拆分岗位、标签、评估、要求、申请和沟通记录，保留完整 AI 输出以便追溯
 - 🔁 **异步可靠推送**：自我介绍生成不阻塞岗位评估响应，WebSocket 任务收到 ACK 后才从 pending 队列移除
 - 📊 **求职进度看板**：支持岗位分页、状态/分数筛选、关键词搜索、详情查看和进度更新
-- 🧪 **自动化验证**：当前共 84 项测试通过，覆盖后端、扩展后台、边界规则和连接恢复；前端生产构建通过
+- 📈 **真实数据分析**：基于 SQLite 中每个岗位的最新评估，聚合匹配度、岗位类别、技能需求、核心要求和技能缺口
+- 🧪 **自动化验证**：当前共 95 项测试通过，覆盖后端分析、扩展后台、边界规则和连接恢复；前端生产构建通过
 
 ---
 
@@ -62,7 +64,7 @@ BOSS AI 求职助手是一个围绕真实求职流程设计的个人全栈项目
 | :--- | :--- | :--- |
 | 岗位采集层 | `job-scanner-extension/` | DOM 采集、招聘者活跃度过滤、任务状态机、沟通流程 |
 | 消息回填层 | `chat-assistant-extension/` | WebSocket 连接、联系人定位、草稿回填和发送前复核 |
-| 接口层 | `backend/app/api/` | 岗位评估、管理面板、自我介绍和测试推送接口 |
+| 接口层 | `backend/app/api/` | 岗位评估、管理面板、岗位分析、自我介绍和测试推送接口 |
 | 服务层 | `backend/app/services/` | Coze 调用、业务编排、规则检查、后台任务和连接管理 |
 | 数据层 | `backend/app/database/` | SQLAlchemy Model、Repository、事务保存与查询 |
 | Schema 层 | `backend/app/schemas/` | 请求、响应和任务消息的数据校验 |
@@ -158,19 +160,22 @@ boss-auto-assistant/
 │   │   ├── api/                     # FastAPI 路由
 │   │   │   ├── jobs.py              # 单岗位与批量评估
 │   │   │   ├── dashboard.py         # 看板查询与状态更新
+│   │   │   ├── analysis.py          # 岗位分析聚合接口
 │   │   │   ├── introductions.py     # 自我介绍异步生成
 │   │   │   └── chat_assistant.py    # 测试推送与 WebSocket
 │   │   ├── core/config.py           # 环境变量和全局配置
 │   │   ├── database/
 │   │   │   ├── models.py            # SQLAlchemy 数据模型
 │   │   │   ├── repositories.py      # 岗位数据写入
-│   │   │   └── dashboard_repository.py # 看板查询
+│   │   │   ├── dashboard_repository.py # 看板查询
+│   │   │   └── analysis_repository.py  # 分析页只读筛选查询
 │   │   ├── schemas/                 # Pydantic 请求与响应模型
 │   │   ├── services/
 │   │   │   ├── job_service.py       # 岗位评估主编排
 │   │   │   ├── coze_client.py       # Coze HTTP 客户端
 │   │   │   ├── introduction_service.py # 自我介绍后台任务
 │   │   │   ├── websocket_manager.py # 连接、pending 与 ACK
+│   │   │   ├── analysis_service.py  # 聚合统计、去重与 Top N
 │   │   │   ├── job_blacklist.py     # 黑名单规则
 │   │   │   └── job_whitelist.py     # 批量模式白名单规则
 │   │   └── main.py                  # FastAPI 应用入口
@@ -182,12 +187,12 @@ boss-auto-assistant/
 │   └── requirements.txt
 ├── frontend/
 │   ├── src/
-│   │   ├── api/jobs.ts              # Axios 接口封装
+│   │   ├── api/                      # 岗位看板与分析 Axios 封装
 │   │   ├── components/              # 岗位卡片、状态标签、侧栏
 │   │   ├── views/
 │   │   │   ├── JobOverview.vue      # 岗位总览与筛选
 │   │   │   ├── JobDetail.vue        # 岗位详情与分析结果
-│   │   │   ├── JobAnalysis.vue      # 规划中
+│   │   │   ├── JobAnalysis.vue      # 岗位聚合统计与图表
 │   │   │   └── Management.vue       # 规划中
 │   │   └── router/index.ts
 │   └── package.json
@@ -238,6 +243,10 @@ boss-auto-assistant/
   定义岗位、标签、评估、要求、申请和沟通记录的数据关系与约束。
 - `backend/app/services/dashboard_service.py`
   为管理端提供分页筛选、详情查询和求职状态更新。
+- `backend/app/services/analysis_service.py`
+  基于筛选后的真实岗位数据完成分桶、岗位内去重、百分比、Top N、优势技能和技能缺口计算。
+- `backend/app/database/analysis_repository.py`
+  读取岗位的最新评估、规范化要求、申请状态和岗位类别，不改动现有评估与投递流程。
 
 **管理端与消息扩展**
 
@@ -245,6 +254,8 @@ boss-auto-assistant/
   岗位卡片总览，支持状态、最低匹配分、关键词和分页筛选。
 - `frontend/src/views/JobDetail.vue`
   展示岗位基本信息、要求分析、自我介绍依据和已生成沟通内容。
+- `frontend/src/views/JobAnalysis.vue`
+  提供联动筛选、核心指标、分布图、技能/要求排行及加载、空数据和异常状态。
 - `chat-assistant-extension/background.js`
   按用户开关管理 WebSocket、心跳重连和 content script 动态注入。
 - `chat-assistant-extension/content.js`
@@ -352,11 +363,41 @@ COZE_INTRODUCTION_TIMEOUT_SECONDS=90
 | `GET` | `/api/v1/dashboard/jobs` | 分页、筛选和搜索岗位 |
 | `GET` | `/api/v1/dashboard/jobs/{job_id}` | 查询岗位详情与分析结果 |
 | `PATCH` | `/api/v1/dashboard/jobs/{job_id}/status` | 更新求职进度状态 |
+| `GET` | `/api/v1/analysis/overview` | 按筛选条件返回岗位分析页全部聚合数据 |
 | `POST` | `/api/v1/introductions/generate` | 独立调度自我介绍后台任务 |
 | `POST` | `/api/v1/chat-assistant-extension/test` | 绕过 AI 流程推送一条测试回填任务 |
 | `WS` | `/ws/chat-assistant-extension` | 自我介绍推送、心跳和 ACK 通道 |
 
 接口字段与实时响应可以通过 Swagger：<http://127.0.0.1:8000/docs> 查看。
+
+---
+
+## 📈 岗位分析页
+
+启动前后端后访问 <http://127.0.0.1:5173/analysis>。页面支持全部日期、最近 7 天、最近 30 天，以及岗位类别、最低匹配度和投递状态筛选；任一筛选变化都会重新请求统一聚合接口并同步刷新全部统计。
+
+```text
+GET /api/v1/analysis/overview
+  ?days=7|30
+  &job_category=Python后端
+  &min_score=60|70|80
+  &application_status=未投递|沟通|投递简历|面试阶段|入职阶段
+```
+
+统计数据均来自现有 SQLite 表，不包含前端模拟值：
+
+| 分析项 | 数据来源与口径 |
+| :--- | :--- |
+| 岗位总数、日期 | `jobs`，按 `jobs.created_at` 筛选 |
+| 平均匹配度、≥ 70 岗位、分数分布 | 每个岗位最新一条 `job_evaluations.match_score`；空分数不参与平均值和分桶 |
+| 岗位类别 | 最新 `job_evaluations.job_category`，筛选项动态读取数据库中的实际值 |
+| 已沟通 | `applications.status`，除“未投递”外的现有后续状态计入 |
+| 技能需求 Top 10 | `evaluation_requirements` 中的 `required_skill`；同一岗位同一技能只计一次 |
+| 核心要求 Top 10 | `evaluation_requirements` 中的 `top_requirement`；同一岗位同一要求只计一次 |
+| 优势技能 | `job_evaluations.self_intro_context[].matched_skills`，按出现岗位数取 Top 5 |
+| 技能缺口 | 对存在 `matched_skills` 的岗位计算 `required_skill - matched_skills`，再聚合 Top 5 |
+
+历史记录缺少或无法解析 `matched_skills` 时，优势技能和技能缺口返回空数组，页面显示“暂无足够数据”；不会从岗位描述猜测技能。空字符串、空数组、空评分和无法解析的旧 JSON 字段均会安全跳过，不影响其他统计。
 
 ---
 
@@ -392,13 +433,13 @@ npm run build
 当前本地验证结果：
 
 ```text
-Backend:                 74 passed
+Backend:                 85 passed
 Job Scanner Extension:    5 passed
 Chat Assistant Extension: 5 passed
 Frontend Build:           passed
 ```
 
-测试覆盖接口状态码、Coze 响应解析、数据库事务、岗位去重、黑白名单、配置缓存、自我介绍调度、WebSocket 重连、content script 恢复、接口选择和招聘者活跃度边界等场景。
+测试覆盖接口状态码、Coze 响应解析、数据库事务、岗位去重、岗位分析筛选与聚合、技能去重、Top 10、历史空数据、黑白名单、配置缓存、自我介绍调度、WebSocket 重连、content script 恢复、接口选择和招聘者活跃度边界等场景。
 
 ---
 
@@ -494,10 +535,10 @@ POST /api/v1/jobs/bulk-evaluate
 - ✅ **规则控制**：数据库去重、黑名单、受白名单约束的批量模式和配置缓存
 - ✅ **数据持久化**：岗位、标签、评估要求、申请状态和沟通记录的关系建模与事务保存
 - ✅ **管理端主流程**：岗位总览、分页筛选、关键词搜索、详情查看和状态更新
+- ✅ **岗位分析页**：联动筛选、核心指标、匹配度与类别分布、技能/要求 Top 10、优势技能和技能缺口
 - ✅ **自我介绍链路**：后台生成、首次内容保存、WebSocket pending/ACK 和聊天页回填
 - ✅ **误操作防护**：连接与发送默认关闭、联系人歧义停止、发送前二次校验
-- ✅ **工程验证**：84 项自动化测试与前端生产构建通过
-- 🚧 **岗位分析页**：当前为占位页面，后续增加聚合统计与技能分布
+- ✅ **工程验证**：95 项自动化测试与前端生产构建通过
 - 🚧 **管理功能页**：当前为占位页面，后续增加规则与运行参数的可视化配置
 - ⚠️ **页面依赖**：第三方页面结构变化后可能需要更新 DOM selector
 - ⚠️ **外部服务依赖**：真实 AI 效果与延迟取决于 Workflow 服务及个人配置
@@ -506,8 +547,8 @@ POST /api/v1/jobs/bulk-evaluate
 
 ## 🌱 后续优化方向
 
-- 🚧 **管理端数据分析**
-  增加岗位数量、分数分布、技能关键词、各阶段转化和公司维度统计。
+- 🚧 **分析能力扩展**
+  在现有岗位、分数、类别和技能聚合基础上，增加各阶段转化和公司维度统计。
 - 🚧 **规则可视化配置**
   在管理页面维护黑名单、白名单、匹配阈值和扩展运行参数，减少手工编辑 JSON。
 - 🚧 **Docker 与 CI/CD**
