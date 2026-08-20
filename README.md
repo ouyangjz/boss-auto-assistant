@@ -2,7 +2,7 @@
 
 > 集成 Chrome Extension、Coze Workflow、FastAPI、WebSocket 与 Vue 3 的本地求职辅助系统
 
-BOSS AI 求职助手是一个围绕真实求职流程设计的个人全栈项目。系统从 BOSS 岗位列表采集职位信息，调用 AI Workflow 完成匹配分析，将结果保存到本地数据库，并通过可视化看板管理求职进度；当岗位匹配度达到阈值时，还可以异步生成针对岗位的自我介绍并回填到对应聊天窗口。
+BOSS AI 求职助手是一个围绕真实求职流程设计的个人全栈项目。系统从 BOSS 岗位列表采集职位信息，先执行本地黑白名单规则，再对未命中规则的岗位调用 AI Workflow 完成匹配分析，将结果保存到本地数据库，并通过可视化看板管理求职进度；当岗位匹配度达到动态阈值时，还可以异步生成针对岗位的自我介绍并回填到对应聊天窗口。
 
 相比只输出一次分析结果的 AI Demo，这个项目更强调完整链路落地：从 **浏览器 DOM 采集、岗位匹配、数据持久化、进度管理，到异步生成、WebSocket 推送与消息回填**，将 AI 能力组织成一个可操作、可追踪、可测试的产品原型。
 
@@ -13,6 +13,9 @@ BOSS AI 求职助手是一个围绕真实求职流程设计的个人全栈项目
 <summary><strong>查看版本更新记录（最新：2026-08-20）</strong></summary>
 
 - `2026-08-20`
+  - 规则管理页：完成 `/management` 可视化配置，支持动态匹配阈值、黑白名单查看、新增、编辑、删除、独立启停和本地规则测试。
+  - 规则持久化：新增统一规则服务和管理 API，配置经 Pydantic 校验后使用临时文件原子替换，保存后立即刷新缓存，无需重启 FastAPI。
+  - 评估链路：普通岗位调整为“黑名单 → 白名单 → Coze → 动态阈值”，插件改为遵循后端 `should_contact` 决策，不再自行硬编码匹配阈值。
   - 岗位分析：新增 `/analysis` 页面和聚合 API，支持日期、类别、匹配度、投递状态筛选，以及分数、类别、技能、要求、优势和缺口统计。
   - 规则配置：黑名单与白名单增加文件状态缓存，配置未变化时不重复读取，配置损坏时继续使用上一份有效缓存。
   - 岗位筛选：新增招聘者活跃度判断，明确超过 3 天的岗位在调用后端前直接跳过。
@@ -26,7 +29,7 @@ BOSS AI 求职助手是一个围绕真实求职流程设计的个人全栈项目
 
 </details>
 
-> **使用边界**：项目不会绕过平台访问控制、验证码或其他保护机制。连接、批量处理和自动发送均采用安全默认值；任何会触达真实招聘者的操作都应由使用者确认并遵守相关平台规则。
+> **使用边界**：本项目定位为 AI 辅助求职工具，用于岗位信息整理、职位分析、简历匹配和沟通内容辅助生成。项目不会绕过目标平台的访问控制、验证码、安全策略或其他技术保护措施，不提供规避平台规则的功能。涉及招聘平台交互的功能均应遵循平台相关服务协议和使用规范。
 
 ---
 
@@ -42,7 +45,8 @@ BOSS AI 求职助手是一个围绕真实求职流程设计的个人全栈项目
 - 🔁 **异步可靠推送**：自我介绍生成不阻塞岗位评估响应，WebSocket 任务收到 ACK 后才从 pending 队列移除
 - 📊 **求职进度看板**：支持岗位分页、状态/分数筛选、关键词搜索、详情查看和进度更新
 - 📈 **真实数据分析**：基于 SQLite 中每个岗位的最新评估，聚合匹配度、岗位类别、技能需求、核心要求和技能缺口
-- 🧪 **自动化验证**：当前共 95 项测试通过，覆盖后端分析、扩展后台、边界规则和连接恢复；前端生产构建通过
+- ⚙️ **规则可视化管理**：动态维护匹配阈值与黑白名单，支持规则测试、安全落盘和配置热更新
+- 🧪 **自动化验证**：当前共 105 项测试通过，覆盖后端分析、规则管理、扩展后台、边界规则和连接恢复；前端生产构建通过
 
 ---
 
@@ -68,7 +72,7 @@ BOSS AI 求职助手是一个围绕真实求职流程设计的个人全栈项目
 | 服务层 | `backend/app/services/` | Coze 调用、业务编排、规则检查、后台任务和连接管理 |
 | 数据层 | `backend/app/database/` | SQLAlchemy Model、Repository、事务保存与查询 |
 | Schema 层 | `backend/app/schemas/` | 请求、响应和任务消息的数据校验 |
-| 管理端 | `frontend/src/` | 岗位列表、详情、筛选、分析展示和状态维护 |
+| 管理端 | `frontend/src/` | 岗位列表、详情、分析展示、状态维护和规则配置 |
 | Workflow 层 | `coze/` | 岗位匹配和自我介绍生成的参考 Workflow |
 
 ### 系统数据流
@@ -88,6 +92,7 @@ flowchart TD
     subgraph Backend["FastAPI Backend"]
         JobAPI["Jobs API"]
         DashboardAPI["Dashboard API"]
+        ManagementAPI["Management API"]
         IntroAPI["Introduction Service"]
         RuleEngine["去重 / 黑名单 / 白名单"]
         WSManager["WebSocket Manager"]
@@ -100,14 +105,17 @@ flowchart TD
     end
 
     SQLite[("SQLite")]
+    RuleFiles[("Rule JSON")]
 
     User --> BossPage --> Scanner --> JobAPI
     JobAPI --> RuleEngine
-    RuleEngine --> EvaluateWF
+    RuleEngine -->|未命中本地规则| EvaluateWF
     EvaluateWF --> JobAPI
     JobAPI --> Repository --> SQLite
 
     SQLite --> DashboardAPI --> Dashboard --> User
+    Dashboard --> ManagementAPI --> RuleFiles
+    RuleFiles --> RuleEngine
 
     JobAPI -->|高匹配且上下文完整| IntroAPI
     IntroAPI --> IntroWF
@@ -120,12 +128,12 @@ flowchart TD
     classDef storage fill:#f0fdf4,stroke:#4ade80,color:#111;
 
     class BossPage,Scanner,ChatPage,ChatAssistant,Dashboard browser;
-    class JobAPI,DashboardAPI,IntroAPI,RuleEngine,WSManager,Repository backend;
+    class JobAPI,DashboardAPI,ManagementAPI,IntroAPI,RuleEngine,WSManager,Repository backend;
     class EvaluateWF,IntroWF ai;
-    class SQLite storage;
+    class SQLite,RuleFiles storage;
 ```
 
-数据流路径：扩展采集岗位 → 后端执行去重和规则检查 → Coze 返回结构化匹配结果 → SQLAlchemy 事务化保存 → Vue 看板展示；高匹配岗位在原评估响应完成后异步生成自我介绍 → WebSocket 推送 → 聊天扩展定位联系人并回填 → 用户检查后发送。
+数据流路径：扩展采集岗位 → 后端执行去重、黑名单和白名单检查 → 未命中规则时由 Coze 返回结构化匹配结果 → 按动态阈值形成后端决策 → SQLAlchemy 事务化保存 → Vue 看板展示；管理页通过 Management API 原子保存规则并让后续岗位立即读取；高匹配岗位在原评估响应完成后异步生成自我介绍 → WebSocket 推送 → 聊天扩展定位联系人并回填 → 用户检查后发送。
 
 ### 数据存储与消息状态分工
 
@@ -161,6 +169,7 @@ boss-auto-assistant/
 │   │   │   ├── jobs.py              # 单岗位与批量评估
 │   │   │   ├── dashboard.py         # 看板查询与状态更新
 │   │   │   ├── analysis.py          # 岗位分析聚合接口
+│   │   │   ├── management.py        # 规则配置管理接口
 │   │   │   ├── introductions.py     # 自我介绍异步生成
 │   │   │   └── chat_assistant.py    # 测试推送与 WebSocket
 │   │   ├── core/config.py           # 环境变量和全局配置
@@ -169,7 +178,7 @@ boss-auto-assistant/
 │   │   │   ├── repositories.py      # 岗位数据写入
 │   │   │   ├── dashboard_repository.py # 看板查询
 │   │   │   └── analysis_repository.py  # 分析页只读筛选查询
-│   │   ├── schemas/                 # Pydantic 请求与响应模型
+│   │   ├── schemas/                 # Pydantic 请求、响应和规则配置模型
 │   │   ├── services/
 │   │   │   ├── job_service.py       # 岗位评估主编排
 │   │   │   ├── coze_client.py       # Coze HTTP 客户端
@@ -178,9 +187,9 @@ boss-auto-assistant/
 │   │   │   ├── analysis_service.py  # 聚合统计、去重与 Top N
 │   │   │   ├── rule_service.py      # 规则管理、原子保存与动态阈值
 │   │   │   ├── job_blacklist.py     # 黑名单规则
-│   │   │   └── job_whitelist.py     # 批量模式白名单规则
+│   │   │   └── job_whitelist.py     # 白名单兼容入口
 │   │   └── main.py                  # FastAPI 应用入口
-│   ├── config/                       # 黑白名单示例
+│   ├── config/                       # 黑白名单与动态设置 JSON
 │   ├── data/                         # 本地 SQLite 数据库
 │   ├── scripts/import_json_to_db.py  # 历史 JSON 导入
 │   ├── tests/                        # Pytest 测试
@@ -188,13 +197,13 @@ boss-auto-assistant/
 │   └── requirements.txt
 ├── frontend/
 │   ├── src/
-│   │   ├── api/                      # 岗位看板与分析 Axios 封装
-│   │   ├── components/              # 岗位卡片、状态标签、侧栏
+│   │   ├── api/                      # 看板、分析与规则管理 Axios 封装
+│   │   ├── components/              # 岗位卡片、规则编辑器/表格、状态标签、侧栏
 │   │   ├── views/
 │   │   │   ├── JobOverview.vue      # 岗位总览与筛选
 │   │   │   ├── JobDetail.vue        # 岗位详情与分析结果
 │   │   │   ├── JobAnalysis.vue      # 岗位聚合统计与图表
-│   │   │   └── Management.vue       # 规划中
+│   │   │   └── Management.vue       # 规则配置管理页
 │   │   └── router/index.ts
 │   └── package.json
 ├── job-scanner-extension/
@@ -233,7 +242,9 @@ boss-auto-assistant/
 **后端**
 
 - `backend/app/services/job_service.py`
-  岗位评估主流程，依次执行去重、黑名单、Workflow 调用、保存和状态计算。
+  岗位评估主流程，依次执行去重、黑名单、白名单、Workflow 调用、动态阈值决策和保存。
+- `backend/app/services/rule_service.py`
+  统一读取和匹配黑白名单，管理动态阈值，并通过校验、临时文件和原子替换安全保存配置。
 - `backend/app/services/coze_client.py`
   封装 Coze 请求、超时、响应解析和异常分类。
 - `backend/app/services/introduction_service.py`
@@ -257,6 +268,8 @@ boss-auto-assistant/
   展示岗位基本信息、要求分析、自我介绍依据和已生成沟通内容。
 - `frontend/src/views/JobAnalysis.vue`
   提供联动筛选、核心指标、分布图、技能/要求排行及加载、空数据和异常状态。
+- `frontend/src/views/Management.vue`
+  可视化维护匹配阈值和黑白名单，支持规则 CRUD、独立启停、删除确认和本地规则测试。
 - `chat-assistant-extension/background.js`
   按用户开关管理 WebSocket、心跳重连和 content script 动态注入。
 - `chat-assistant-extension/content.js`
@@ -301,7 +314,7 @@ npm ci
 npm run dev
 ```
 
-管理端地址：<http://127.0.0.1:5173>。Vite 会将 `/api` 请求代理到本地 FastAPI。
+管理端地址：<http://127.0.0.1:5173>。岗位总览、岗位分析和规则配置分别位于 `/jobs`、`/analysis`、`/management`；Vite 会将 `/api` 请求代理到本地 FastAPI。
 
 ### 3. 加载 Chrome 扩展
 
@@ -320,27 +333,31 @@ npm run dev
 复制 `backend/.env.example` 为 `backend/.env` 后配置：
 
 ```env
-# 服务
+# 应用服务
 APP_NAME=BOSS Job Evaluator
 HOST=127.0.0.1
 PORT=8000
-MATCH_THRESHOLD=70
-JOB_SETTINGS_CONFIG=config/job_settings.json
 
-# 数据
+# 数据存储
 DATA_DIR=data
 # DATABASE_URL=sqlite:///data/jobs.db
+
+# 规则与岗位决策
+MATCH_THRESHOLD=70
+JOB_SETTINGS_CONFIG=config/job_settings.json
 JOB_BLACKLIST_CONFIG=config/job_blacklist.json
 JOB_WHITELIST_CONFIG=config/job_whitelist.json
 
-# Coze 岗位匹配
+# Coze 公共连接配置
 COZE_BASE_URL=http://127.0.0.1:8888
-COZE_WORKFLOW_ID=your-job-evaluation-workflow-id
 COZE_TOKEN=your-token
+
+# 岗位匹配 Workflow
+COZE_WORKFLOW_ID=your-job-evaluation-workflow-id
 COZE_TIMEOUT_SECONDS=90
 COZE_TIMEOUT_FALLBACK_SCORE=50
 
-# Coze 自我介绍生成
+# 自我介绍 Workflow
 COZE_INTRODUCTION_WORKFLOW_ID=your-introduction-workflow-id
 COZE_INTRODUCTION_TIMEOUT_SECONDS=90
 ```
@@ -348,6 +365,7 @@ COZE_INTRODUCTION_TIMEOUT_SECONDS=90
 注意：
 
 - `.env` 已加入 `.gitignore`，不要提交真实 Token 或 Workflow ID；
+- 管理页未保存动态阈值时使用 `MATCH_THRESHOLD`；页面保存后读取 `JOB_SETTINGS_CONFIG`，无需重启后端；
 - 自我介绍功能可选，不配置 `COZE_INTRODUCTION_WORKFLOW_ID` 时不影响基础岗位评估；
 - 修改环境变量后需要重启 FastAPI；
 - 插件默认连接 `127.0.0.1:8000`，修改端口时需要同步修改扩展配置；
@@ -360,17 +378,37 @@ COZE_INTRODUCTION_TIMEOUT_SECONDS=90
 | 方法 | 路径 | 说明 |
 | :--- | :--- | :--- |
 | `GET` | `/health` | 后端健康检查 |
-| `POST` | `/api/v1/jobs/evaluate` | 调用 Coze 评估岗位并保存结果 |
+| `POST` | `/api/v1/jobs/evaluate` | 依次执行本地规则、Coze 与动态阈值决策并保存结果 |
 | `POST` | `/api/v1/jobs/bulk-evaluate` | 执行去重、黑名单和白名单检查后保存批量岗位 |
 | `GET` | `/api/v1/dashboard/jobs` | 分页、筛选和搜索岗位 |
 | `GET` | `/api/v1/dashboard/jobs/{job_id}` | 查询岗位详情与分析结果 |
 | `PATCH` | `/api/v1/dashboard/jobs/{job_id}/status` | 更新求职进度状态 |
 | `GET` | `/api/v1/analysis/overview` | 按筛选条件返回岗位分析页全部聚合数据 |
+| `GET` | `/api/v1/management/config` | 读取动态阈值、黑名单和白名单 |
+| `PATCH` | `/api/v1/management/settings` | 更新动态匹配阈值 |
+| `POST/PATCH/DELETE` | `/api/v1/management/{blacklist\|whitelist}` | 新增规则，或配合 `/{rule_id}` 编辑和删除规则 |
+| `POST` | `/api/v1/management/test` | 仅运行本地黑白名单判断，不调用 Coze 或保存岗位 |
 | `POST` | `/api/v1/introductions/generate` | 独立调度自我介绍后台任务 |
 | `POST` | `/api/v1/chat-assistant-extension/test` | 绕过 AI 流程推送一条测试回填任务 |
 | `WS` | `/ws/chat-assistant-extension` | 自我介绍推送、心跳和 ACK 通道 |
 
 接口字段与实时响应可以通过 Swagger：<http://127.0.0.1:8000/docs> 查看。
+
+---
+
+## ⚙️ 规则配置管理页
+
+启动前后端后访问 <http://127.0.0.1:5173/management>。页面可以维护 `0–100` 的自动沟通匹配阈值，以及黑名单和白名单关键词规则。规则支持岗位名称、公司名称、岗位描述和岗位标签四种作用范围；新规则采用忽略英文大小写的关键词包含匹配。
+
+黑名单优先于白名单：黑名单命中时直接跳过，不调用 Coze；未命中黑名单但命中白名单时跳过 Coze 并按本地规则通过；两者均未命中时才调用 Coze，并使用当前动态阈值决定是否沟通。页面提供的“规则测试”只运行本地判断，不调用外部 Workflow，也不会保存岗位。
+
+| 配置 | 存储位置 | 生效方式 |
+| :--- | :--- | :--- |
+| 动态匹配阈值 | `backend/config/job_settings.json` | 保存后刷新内存配置，下一岗位立即生效 |
+| 黑名单 | `backend/config/job_blacklist.json` | 原子替换文件并清理对应缓存 |
+| 白名单 | `backend/config/job_whitelist.json` | 原子替换文件并清理对应缓存 |
+
+后端对阈值、关键词、作用范围、匹配方式和启停状态进行 Pydantic 校验。JSON 写入采用“同目录临时文件 → 再次解析校验 → 原子替换”；读取失败时保留上一份有效缓存，避免半写文件或单条坏规则影响服务启动。旧版规则数组仍可读取，首次通过管理页修改后转换为带稳定 ID 和独立启停状态的新结构。
 
 ---
 
@@ -435,13 +473,13 @@ npm run build
 当前本地验证结果：
 
 ```text
-Backend:                 85 passed
-Job Scanner Extension:    5 passed
+Backend:                 94 passed
+Job Scanner Extension:    6 passed
 Chat Assistant Extension: 5 passed
 Frontend Build:           passed
 ```
 
-测试覆盖接口状态码、Coze 响应解析、数据库事务、岗位去重、岗位分析筛选与聚合、技能去重、Top 10、历史空数据、黑白名单、配置缓存、自我介绍调度、WebSocket 重连、content script 恢复、接口选择和招聘者活跃度边界等场景。
+测试覆盖接口状态码、Coze 响应解析、数据库事务、岗位去重、岗位分析筛选与聚合、技能去重、Top 10、历史空数据、规则 CRUD、黑白名单优先级、动态阈值边界、配置损坏回退、原子保存、自我介绍调度、WebSocket 重连、后端决策执行和招聘者活跃度边界等场景。
 
 ---
 
@@ -459,7 +497,7 @@ POST /api/v1/jobs/evaluate
     -> ⑤ 按动态 match_threshold 判断是否沟通
     -> ⑥ SQLAlchemy 事务化保存岗位、评估和申请状态
     -> ⑦ 返回匹配分和后端决策
-    -> ⑦ 高匹配且上下文完整时，后台调度自我介绍生成
+    -> ⑧ 高匹配且上下文完整时，后台调度自我介绍生成
 ```
 
 ### 自我介绍生成与回填
@@ -535,14 +573,14 @@ POST /api/v1/jobs/bulk-evaluate
 
 - ✅ **岗位采集扩展**：串行遍历、DOM 采集、招聘者活跃度过滤、暂停/停止、去重和滚动加载
 - ✅ **岗位匹配能力**：Coze Workflow 调用、结构化响应解析、超时控制和降级结果保存
-- ✅ **规则控制**：数据库去重、黑名单、受白名单约束的批量模式和配置缓存
+- ✅ **规则控制**：数据库去重、黑名单优先、白名单直通、动态匹配阈值和安全配置缓存
 - ✅ **数据持久化**：岗位、标签、评估要求、申请状态和沟通记录的关系建模与事务保存
-- ✅ **管理端主流程**：岗位总览、分页筛选、关键词搜索、详情查看和状态更新
+- ✅ **管理端主流程**：岗位总览、分页筛选、关键词搜索、详情查看、状态更新和规则配置
 - ✅ **岗位分析页**：联动筛选、核心指标、匹配度与类别分布、技能/要求 Top 10、优势技能和技能缺口
 - ✅ **自我介绍链路**：后台生成、首次内容保存、WebSocket pending/ACK 和聊天页回填
 - ✅ **误操作防护**：连接与发送默认关闭、联系人歧义停止、发送前二次校验
-- ✅ **工程验证**：95 项自动化测试与前端生产构建通过
-- 🚧 **管理功能页**：当前为占位页面，后续增加规则与运行参数的可视化配置
+- ✅ **规则管理页**：阈值保存、黑白名单 CRUD、独立启停、删除确认、本地规则测试和即时生效
+- ✅ **工程验证**：105 项自动化测试与前端生产构建通过
 - ⚠️ **页面依赖**：第三方页面结构变化后可能需要更新 DOM selector
 - ⚠️ **外部服务依赖**：真实 AI 效果与延迟取决于 Workflow 服务及个人配置
 
@@ -552,8 +590,6 @@ POST /api/v1/jobs/bulk-evaluate
 
 - 🚧 **分析能力扩展**
   在现有岗位、分数、类别和技能聚合基础上，增加各阶段转化和公司维度统计。
-- 🚧 **规则可视化配置**
-  在管理页面维护黑名单、白名单和匹配阈值，减少手工编辑 JSON。
 - 🚧 **Docker 与 CI/CD**
   增加 Docker Compose、本地一键启动和 GitHub Actions，自动运行后端、扩展与前端验证。
 - 🚧 **可观测性**
