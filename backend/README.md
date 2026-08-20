@@ -47,9 +47,9 @@ COZE_TIMEOUT_FALLBACK_SCORE=50
 ```
 
 命中后不会调用 Coze、不会保存该岗位，并记录 `[BLACKLIST SKIP]` 日志。未命中
-时继续原有流程，并以 `[COZE EVALUATE]` 标识 Coze 调用日志。配置文件缺失、编码
-错误、JSON 错误或字段类型错误时，服务只记录 warning，禁用本次黑名单检查并
-正常调用 Coze。
+时继续原有流程，并以 `[COZE EVALUATE]` 标识 Coze 调用日志。服务会缓存最后一份
+有效配置；配置文件缺失、编码错误、JSON 错误或字段类型错误时记录 warning 并继续
+使用缓存。若服务启动后从未成功加载过配置，则禁用黑名单检查并正常调用 Coze。
 
 黑名单之前还会对请求中的非空 `job_id` 做数据库唯一性检查。`jobs` 表中已经存在
 该 ID 时同样返回 0 分，不调用 Coze，也不新增评估或申请记录。
@@ -66,8 +66,8 @@ COZE_TIMEOUT_FALLBACK_SCORE=50
 }
 ```
 
-可通过 `.env` 中的 `JOB_BLACKLIST_CONFIG` 指定其他配置路径。配置会在每次评估前
-重新读取，因此修改规则无需修改 Python 源码，也无需重启服务。
+可通过 `.env` 中的 `JOB_BLACKLIST_CONFIG` 指定其他配置路径。每次评估只检查文件
+状态，文件发生变化时才重新读取；有效修改无需重启服务即可生效。
 
 ## 海投白名单
 
@@ -82,9 +82,11 @@ Copy-Item config/job_whitelist.example.json config/job_whitelist.json
 实际配置文件已加入 `.gitignore`，避免个人岗位偏好被提交；也可以通过 `.env` 的
 `JOB_WHITELIST_CONFIG` 指定其他路径。
 
-白名单采用安全拒绝策略：配置缺失、JSON 或字段类型错误、`enabled` 为 `false`、
-规则为空或岗位未命中时，海投接口均返回 0 分且不保存。只有命中至少一条规则才会
-保存并返回 71 分。普通 `/api/v1/jobs/evaluate` 不受白名单影响。
+白名单采用安全拒绝策略，并缓存最后一份有效配置。文件发生变化时才重新读取；新
+文件无效时继续使用缓存。若服务启动后从未成功加载过配置，则配置缺失、JSON 或字段
+类型错误都会拒绝海投；`enabled` 为 `false`、规则为空或岗位未命中时也返回 0 分且
+不保存。只有命中至少一条规则才会保存并返回 71 分。普通 `/api/v1/jobs/evaluate`
+不受白名单影响。
 
 评估接口只向 Workflow 发送 `job_name`、`job_description` 和数组形式的 `job_tags`。Coze API 应兼容 `POST {COZE_BASE_URL}/v1/workflow/run`。
 

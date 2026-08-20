@@ -1,7 +1,8 @@
 import json
 import logging
+from pathlib import Path
 
-from app.services.job_blacklist import check_job_blacklist
+from app.services.job_blacklist import _config_cache, check_job_blacklist
 
 
 def _write_config(tmp_path, **overrides):
@@ -110,3 +111,57 @@ def test_disabled_config_allows_job(tmp_path):
     assert check_job_blacklist(
         {"job_name": "电商客服专员"}, config_path
     ) == {"matched": False}
+
+
+def test_unchanged_config_uses_cached_content(tmp_path, monkeypatch):
+    config_path = _write_config(tmp_path, job_name_contains=["Python"])
+    _config_cache.clear(config_path)
+    original_read_text = Path.read_text
+    read_count = 0
+
+    def counted_read_text(path, *args, **kwargs):
+        nonlocal read_count
+        if path == config_path.resolve():
+            read_count += 1
+        return original_read_text(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "read_text", counted_read_text)
+
+    assert check_job_blacklist({"job_name": "Python工程师"}, config_path)["matched"]
+    assert check_job_blacklist({"job_name": "Python工程师"}, config_path)["matched"]
+    assert read_count == 1
+
+
+def test_valid_config_change_reloads_cache(tmp_path):
+    config_path = _write_config(tmp_path, job_name_contains=["Python"])
+    assert check_job_blacklist({"job_name": "Python工程师"}, config_path)["matched"]
+
+    config_path.write_text(
+        json.dumps(
+            {
+                "enabled": True,
+                "job_name_exact": [],
+                "job_name_contains": ["Rust开发"],
+                "job_tag_contains": [],
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+
+    assert check_job_blacklist(
+        {"job_name": "Python工程师"}, config_path
+    ) == {"matched": False}
+    assert check_job_blacklist({"job_name": "Rust开发工程师"}, config_path)["matched"]
+
+
+def test_invalid_reload_keeps_last_valid_config(tmp_path, caplog):
+    config_path = _write_config(tmp_path, job_name_contains=["Python"])
+    assert check_job_blacklist({"job_name": "Python工程师"}, config_path)["matched"]
+
+    config_path.write_text("{invalid", encoding="utf-8")
+    with caplog.at_level(logging.WARNING, logger="uvicorn.error"):
+        result = check_job_blacklist({"job_name": "Python工程师"}, config_path)
+
+    assert result["matched"] is True
+    assert "keeping last valid config" in caplog.text

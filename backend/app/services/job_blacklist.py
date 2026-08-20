@@ -1,16 +1,16 @@
-import json
 import logging
 from pathlib import Path
 from typing import Any, Dict, Mapping, Optional
 
 from app.core.config import settings
+from app.services.rule_config_cache import RuleConfigCache
 
 logger = logging.getLogger("uvicorn.error")
 
-RULE_TYPES = (
-    "job_name_exact",
-    "job_name_contains",
-    "job_tag_contains",
+_config_cache = RuleConfigCache(
+    logger=logger,
+    log_prefix="BLACKLIST",
+    empty_cache_effect="blacklist disabled",
 )
 
 
@@ -20,47 +20,13 @@ def _normalize(value: str) -> str:
 
 
 def _load_config(config_path: Path) -> Optional[Dict[str, Any]]:
-    try:
-        config = json.loads(config_path.read_text(encoding="utf-8"))
-    except FileNotFoundError:
-        logger.warning(
-            "[BLACKLIST] config not found, blacklist disabled: %s", config_path
-        )
-        return None
-    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
-        logger.warning(
-            "[BLACKLIST] invalid config, blacklist disabled: %s (%s)",
-            config_path,
-            exc,
-        )
-        return None
-
-    if not isinstance(config, dict) or not isinstance(config.get("enabled", True), bool):
-        logger.warning(
-            "[BLACKLIST] config must be an object with a boolean enabled field; "
-            "blacklist disabled: %s",
-            config_path,
-        )
-        return None
-
-    for rule_type in RULE_TYPES:
-        rules = config.get(rule_type, [])
-        if not isinstance(rules, list) or not all(
-            isinstance(rule, str) for rule in rules
-        ):
-            logger.warning(
-                "[BLACKLIST] %s must be a string array; blacklist disabled: %s",
-                rule_type,
-                config_path,
-            )
-            return None
-    return config
+    return _config_cache.load(config_path)
 
 
 def check_job_blacklist(
     job_data: Mapping[str, Any], config_path: Optional[Path] = None
 ) -> Dict[str, Any]:
-    """检查岗位是否命中本地规则；配置异常时安全放行。"""
+    """检查岗位是否命中本地规则；配置异常时优先沿用最后有效配置。"""
     path = Path(config_path or settings.job_blacklist_config)
     config = _load_config(path)
     if not config or not config.get("enabled", True):
