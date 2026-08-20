@@ -99,7 +99,7 @@
   const EXPERIENCE_PATTERN = /经验不限|无经验|在校\/应届|应届生|1年以内|\d+\s*[-–~至]\s*\d+年|\d+年以上|\d+年以内/;
   const EDUCATION_PATTERN = /学历不限|初中|高中|中专|大专|本科|硕士|博士/;
   const SALARY_PATTERN = /\d+(?:\.\d+)?\s*[-–~至]\s*\d+(?:\.\d+)?\s*[Kk]|\d+\s*[Kk]以上/;
-  const ACTIVITY_PATTERN_SOURCE = "(?:刚刚活跃|今日活跃|本周活跃|本月活跃|在线|\\d+\\s*(?:分钟|小时|日|天|周|月)内活跃)";
+  const ACTIVITY_PATTERN_SOURCE = "(?:刚刚活跃|今日活跃|昨日活跃|前天活跃|本周活跃|本月活跃|在线|\\d+\\s*(?:分钟|小时|日|天|周|月)内活跃)";
 
   function uniqueTexts(elements) {
     return elements.map((element) => visibleText(element).replace(/\s+/g, " ").trim()).filter(Boolean)
@@ -237,6 +237,39 @@
       .replace(/\u00a0/g, " ")
       .replace(/\r\n?/g, "\n")
       .trim();
+  }
+
+  function parseRecruiterActivity(text, maximumDays = ns.CONFIG.recruiterActivityMaxDays ?? 3) {
+    const match = String(text || "").match(new RegExp(ACTIVITY_PATTERN_SOURCE));
+    const activityText = match?.[0]?.replace(/\s+/g, "").trim() || "";
+    if (!activityText) return { text: "", withinAllowedRange: null };
+
+    if (["在线", "刚刚活跃", "今日活跃", "昨日活跃", "前天活跃"].includes(activityText)) {
+      return { text: activityText, withinAllowedRange: true };
+    }
+
+    const relative = activityText.match(/^(\d+)(分钟|小时|日|天|周|月)内活跃$/);
+    if (!relative) {
+      // “本周/本月活跃”无法保证在最近 maximumDays 天内，按超出范围处理。
+      return { text: activityText, withinAllowedRange: false };
+    }
+
+    const amount = Number(relative[1]);
+    const unit = relative[2];
+    const maximumMinutes = maximumDays * 24 * 60;
+    const activityMinutes = {
+      分钟: amount,
+      小时: amount * 60,
+      日: amount * 24 * 60,
+      天: amount * 24 * 60,
+      周: amount * 7 * 24 * 60,
+      月: amount * 30 * 24 * 60
+    }[unit];
+    return { text: activityText, withinAllowedRange: activityMinutes <= maximumMinutes };
+  }
+
+  function getRecruiterActivity(root = findDetailRoot()) {
+    return parseRecruiterActivity(visibleText(root));
   }
 
   function parseRecruiterInfo(text) {
@@ -428,6 +461,8 @@
     cleanDescriptionText,
     extractLeadingDescriptionTags,
     normalizeSalary,
+    parseRecruiterActivity,
+    getRecruiterActivity,
     parseRecruiterInfo,
     detailSnapshot,
     waitForJobDetailUpdate,

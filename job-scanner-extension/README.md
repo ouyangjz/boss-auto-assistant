@@ -33,6 +33,8 @@ Popup 的“清除当前岗位信息”会停止并等待当前循环退出，�
 
 HR 文本 fallback 支持“刚刚活跃、今日活跃、在线”以及“3日内活跃、2周内活跃、4月内活跃”等可变时间格式。活动状态格式变化不会再导致 `hr_name`、`hr_title` 为空或招聘者卡片混入职位描述。
 
+每个岗位详情稳定后，插件会先检查 BOSS 活跃状态。只有“在线、刚刚活跃、今日活跃、昨日活跃、前天活跃”或不超过 3 日/天（含等价分钟、小时）的状态才继续请求 FastAPI；明确超过 3 天以及无法保证在 3 天内的“本周活跃、本月活跃”会直接跳过并进入下一岗位。未识别到活跃状态时，为兼容页面改版，仍按原流程继续。范围可通过 `config/constants.js` 的 `recruiterActivityMaxDays` 调整，活跃文本不会写入岗位数据或数据库。
+
 薪资中的私有区字体字符会按 `constants.js` 的 `salaryPrivateUseStart` 与 `salaryPrivateUseDigits` 转回普通数字。描述标题之后、正文之前连续出现的短技术词会自动移动到 `job_tags`，不会继续混在 `job_description` 中。若网站将来更换字体映射，插件会把未知私有区字符显示为 `?` 并记录 `SALARY_PRIVATE_USE_CHAR_UNKNOWN`，避免静默保存乱码。
 
 沟通成功弹窗会先按“已向BOSS发送消息”文本节点及“留在此页/继续沟通”的公共祖先确认容器，不再要求弹窗具有特定 class。插件优先点击“留在此页”；按钮找不到或点击无效时改点弹窗内部具有关闭语义的右上角“×”。只有确认弹窗关闭后才继续，否则任务暂停，避免点击遮罩层下的岗位。
@@ -65,6 +67,7 @@ window.__BOSS_PLUGIN_DEBUG__.findJobList()
 window.__BOSS_PLUGIN_DEBUG__.findScrollContainer()
 window.__BOSS_PLUGIN_DEBUG__.getVisibleJobs()
 window.__BOSS_PLUGIN_DEBUG__.extractCurrentJob()
+window.__BOSS_PLUGIN_DEBUG__.getRecruiterActivity()
 window.__BOSS_PLUGIN_DEBUG__.findCommunicateButton()
 window.__BOSS_PLUGIN_DEBUG__.findCommunicationModal()
 ```

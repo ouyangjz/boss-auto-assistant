@@ -29,6 +29,7 @@
     findScrollContainer: ns.jobExtractor.findScrollContainer,
     getVisibleJobs: ns.jobExtractor.getVisibleJobs,
     extractCurrentJob: ns.jobExtractor.extractCurrentJob,
+    getRecruiterActivity: ns.jobExtractor.getRecruiterActivity,
     findJobDescriptionElement: ns.jobExtractor.findJobDescriptionElement,
     findCommunicateButton: ns.communication.findCommunicateButton,
     findCommunicationModal: ns.communication.findCommunicationModal,

@@ -243,6 +243,16 @@
           ns.CONFIG.detailSettleDelayMinMs,
           ns.CONFIG.detailSettleDelayMaxMs
         ), signal);
+        const recruiterActivity = ns.jobExtractor.getRecruiterActivity(detail);
+        if (recruiterActivity.withinAllowedRange === false) {
+          ns.logger.info(
+            `BOSS 活跃状态为“${recruiterActivity.text}”，超出 ${ns.CONFIG.recruiterActivityMaxDays} 天范围，跳过且不请求 FastAPI`
+          );
+          return;
+        }
+        if (recruiterActivity.withinAllowedRange === null) {
+          ns.logger.warn("未识别到 BOSS 活跃状态，按原流程继续");
+        }
         const job = ns.jobExtractor.extractCurrentJob(identity);
         if (!job?.job_description) throw new Error("JOB_DESCRIPTION_NOT_FOUND");
         ns.logger.info("岗位详情加载完成", job);
