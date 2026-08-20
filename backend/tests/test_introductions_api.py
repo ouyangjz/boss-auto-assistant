@@ -27,9 +27,9 @@ def test_generate_introduction_endpoint_schedules_background_task(monkeypatch):
     response = client.post(
         "/api/v1/introductions/generate",
         json={
-            "company_name": "示例公司",
-            "hr_name": "朱先生",
-            "hr_title": "招聘经理",
+            "company_name": "示例科技",
+            "hr_name": "招聘负责人",
+            "hr_title": "招聘专员",
             "job_name": "Python工程师",
             "match_score": 82,
             "self_intro_context": [
@@ -48,7 +48,7 @@ def test_generate_introduction_endpoint_schedules_background_task(monkeypatch):
         "status": "accepted",
     }
     assert len(scheduled) == 1
-    assert scheduled[0].company_name == "示例公司"
+    assert scheduled[0].company_name == "示例科技"
     assert scheduled[0].self_intro_context[0]["matched_skills"] == ["FastAPI"]
 
 

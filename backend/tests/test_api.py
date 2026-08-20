@@ -82,7 +82,7 @@ def test_evaluate_returns_coze_score_and_saves_complete_output(
             "salary": "10-15K",
             "job_description": "第一行\n第二行",
             "job_tags": ["Python", "Agent"],
-            "company_name": "示例公司",
+            "company_name": "示例科技",
         },
     )
     assert response.status_code == 200
@@ -96,7 +96,7 @@ def test_evaluate_returns_coze_score_and_saves_complete_output(
     saved = persisted_payloads[0]
     assert saved["job_id"] == "abc"
     assert saved["salary"] == "10-15K"
-    assert saved["company_name"] == "示例公司"
+    assert saved["company_name"] == "示例科技"
     assert saved["job_description"] == "第一行\n第二行"
     assert saved["job_tags"] == ["Python", "Agent"]
     assert saved["coze_output"] == {
@@ -375,16 +375,16 @@ def test_evaluate_schedules_introduction_only_for_high_score_with_context(
         "/api/v1/jobs/evaluate",
         json={
             "job_name": "Python工程师",
-            "company_name": "示例公司",
-            "hr_name": "朱先生",
-            "hr_title": "招聘经理",
+            "company_name": "示例科技",
+            "hr_name": "招聘负责人",
+            "hr_title": "招聘专员",
         },
     )
 
     assert response.status_code == 200
     assert response.json() == {"success": True, "match_score": 82}
     assert len(scheduled) == 1
-    assert scheduled[0].company_name == "示例公司"
+    assert scheduled[0].company_name == "示例科技"
     assert scheduled[0].self_intro_context[0]["matched_skills"] == ["Python"]
     assert scheduled_application_ids == [42]
 

@@ -11,9 +11,9 @@ def test_chat_assistant_test_endpoint_pushes_message_and_accepts_ack():
         response = client.post(
             "/api/v1/chat-assistant-extension/test",
             json={
-                "company_name": "治粟科技",
-                "hr_name": "朱先生",
-                "hr_title": "招聘经理",
+                "company_name": "示例科技",
+                "hr_name": "招聘负责人",
+                "hr_title": "招聘专员",
                 "job_name": "python开发工程师",
                 "greeting_message": "你好，这是测试消息。",
             },
@@ -23,9 +23,9 @@ def test_chat_assistant_test_endpoint_pushes_message_and_accepts_ack():
 
         message = websocket.receive_json()
         assert message == {
-            "company_name": "治粟科技",
-            "hr_name": "朱先生",
-            "hr_title": "招聘经理",
+            "company_name": "示例科技",
+            "hr_name": "招聘负责人",
+            "hr_title": "招聘专员",
             "job_name": "python开发工程师",
             "match_score": 100,
             "self_intro_context": [],

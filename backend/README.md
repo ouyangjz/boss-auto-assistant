@@ -13,7 +13,7 @@
 历史 JSON 使用独立脚本导入；脚本递归扫描 `data/`，保留原文件，并用内容哈希避免重复导入相同评估：
 
 ```powershell
-conda run -n gluon1 python scripts/import_json_to_db.py
+python scripts/import_json_to_db.py
 ```
 
 复制 `.env.example` 为 `.env` 后配置本地 Coze：
@@ -111,9 +111,9 @@ POST /api/v1/introductions/generate
 
 ```json
 {
-  "company_name": "示例公司",
-  "hr_name": "朱先生",
-  "hr_title": "招聘经理",
+  "company_name": "示例科技",
+  "hr_name": "招聘负责人",
+  "hr_title": "招聘专员",
   "job_name": "Python工程师",
   "match_score": 82,
   "self_intro_context": [
@@ -132,9 +132,11 @@ POST /api/v1/introductions/generate
 服务重启会清空内存队列。
 
 ```powershell
-conda activate gluon1
+python -m venv .venv
+.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 Copy-Item .env.example .env
+Copy-Item config/job_blacklist.example.json config/job_blacklist.json
 Copy-Item config/job_whitelist.example.json config/job_whitelist.json
 uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 ```
@@ -157,14 +159,14 @@ pytest
 
 ```powershell
 $body = @{
-    job_id = "536be58482d10bd50nFy3ty0E1VR"
+    job_id = "example-job-id"
     job_name = "AI智能体开发"
     salary = "6-11K"
     experience = "1年以内"
     education = "大专"
-    company_name = "示例公司"
-    hr_name = "刘女士"
-    hr_title = "经理"
+    company_name = "示例科技"
+    hr_name = "招聘负责人"
+    hr_title = "招聘专员"
     job_description = "职位描述`n1. 使用 AI 编程工具开发 Python 服务"
     job_tags = @("大模型算法", "Python", "SQL")
     source_url = "https://www.zhipin.com/job_detail/example.html"

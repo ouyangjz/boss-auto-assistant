@@ -1,134 +1,541 @@
-# BOSS 直聘岗位筛选与自我介绍回填
+# 🤖 BOSS AI 求职助手
 
-项目包含两个 Chrome Manifest V3 插件和一个 FastAPI 后端服务：`job-scanner-extension`
-采集岗位并按匹配分决定是否沟通；高分且存在 `self_intro_context` 时，服务在响应
-岗位评估之后异步生成自我介绍，并通过 WebSocket 交给 `chat-assistant-extension` 在消息页回填。
-`chat-assistant-extension` 默认不连接本地服务；用户开启连接后默认只回填，也可以通过
-插件弹窗显式开启自动发送。
+> 集成 Chrome Extension、Coze Workflow、FastAPI、WebSocket 与 Vue 3 的本地求职辅助系统
 
-```text
-Popup（开始/暂停/停止、状态展示）
-  -> Content Script（DOM 遍历、串行采集、状态机）
-  -> Background Service Worker（带 120 秒超时和取消能力的 HTTP 请求）
-  -> FastAPI（SQLite 持久化、调用岗位匹配 Workflow）
+BOSS AI 求职助手是一个围绕真实求职流程设计的个人全栈项目。系统从 BOSS 岗位列表采集职位信息，调用 AI Workflow 完成匹配分析，将结果保存到本地数据库，并通过可视化看板管理求职进度；当岗位匹配度达到阈值时，还可以异步生成针对岗位的自我介绍并回填到对应聊天窗口。
 
-高分且有上下文：
+相比只输出一次分析结果的 AI Demo，这个项目更强调完整链路落地：从 **浏览器 DOM 采集、岗位匹配、数据持久化、进度管理，到异步生成、WebSocket 推送与消息回填**，将 AI 能力组织成一个可操作、可追踪、可测试的产品原型。
 
-FastAPI BackgroundTask（自我介绍 Workflow）
-  -> /ws/chat-assistant-extension
-  -> Chat Assistant Extension（定位 HR、校验会话、回填，可选自动发送）
+
+## 📝 最近更新
+
+<details>
+<summary><strong>查看版本更新记录（最新：2026-08-20）</strong></summary>
+
+- `2026-08-20`
+  - 规则配置：黑名单与白名单增加文件状态缓存，配置未变化时不重复读取，配置损坏时继续使用上一份有效缓存。
+  - 岗位筛选：新增招聘者活跃度判断，明确超过 3 天的岗位在调用后端前直接跳过。
+  - 连接控制：消息回填扩展新增 WebSocket 连接开关，连接与自动发送均保持默认关闭。
+  - 项目文档：补充公开仓库说明、隐私边界、测试结果和面向招聘方的项目介绍。
+- `2026-08-19`
+  - 管理面板：新增 Vue 3 岗位总览和详情页，支持分页、筛选、搜索、分析结果展示与求职状态更新。
+  - 批量模式：新增受本地白名单约束的批量评估入口，同时保留岗位去重和黑名单检查。
+  - 自我介绍链路：新增后台异步生成、WebSocket pending 队列、ACK 确认和聊天页回填流程。
+  - 项目初始化：完成岗位筛选扩展、FastAPI 服务、Coze 岗位匹配和 SQLite 持久化主链路。
+
+</details>
+
+> **使用边界**：项目不会绕过平台访问控制、验证码或其他保护机制。连接、批量处理和自动发送均采用安全默认值；任何会触达真实招聘者的操作都应由使用者确认并遵守相关平台规则。
+
+---
+
+## ✨ 项目亮点
+
+- 🧩 **完整业务闭环**：覆盖岗位采集、AI 匹配、持久化、看板管理、自我介绍生成和聊天回填，不是单接口 Demo
+- 🧠 **双 Workflow 协作**：岗位匹配与自我介绍分别使用独立 Workflow，可单独配置超时和降级策略
+- 🧭 **浏览器状态机**：岗位扫描采用串行状态机，支持开始、暂停、停止、恢复、去重和可中断等待
+- 🛡️ **安全默认值**：批量模式、WebSocket 连接和自动发送默认关闭；无法唯一定位招聘者时主动停止
+- 🔍 **动态 DOM 适配**：集中管理多候选 selector，结合 MutationObserver、文本 fallback 和调试接口应对 SPA 页面变化
+- ⚙️ **分层后端设计**：FastAPI 路由、Pydantic Schema、Service、Repository 和 SQLAlchemy Model 分层组织
+- 💾 **结构化数据建模**：拆分岗位、标签、评估、要求、申请和沟通记录，保留完整 AI 输出以便追溯
+- 🔁 **异步可靠推送**：自我介绍生成不阻塞岗位评估响应，WebSocket 任务收到 ACK 后才从 pending 队列移除
+- 📊 **求职进度看板**：支持岗位分页、状态/分数筛选、关键词搜索、详情查看和进度更新
+- 🧪 **自动化验证**：当前共 84 项测试通过，覆盖后端、扩展后台、边界规则和连接恢复；前端生产构建通过
+
+---
+
+## 🏗️ 技术架构
+
+### 技术栈
+
+- 岗位筛选扩展：Chrome Manifest V3 + JavaScript
+- 消息回填扩展：Chrome Manifest V3 + WebSocket + Chrome Storage
+- 后端：Python + FastAPI + Pydantic + HTTPX
+- 数据层：SQLAlchemy + SQLite
+- 管理端：Vue 3 + TypeScript + Vite + Element Plus + Axios
+- AI 能力：Coze Workflow
+- 测试：Pytest + Node Test Runner + Vue TSC
+
+### 核心架构分层
+
+| 层级 | 关键目录 | 职责 |
+| :--- | :--- | :--- |
+| 岗位采集层 | `job-scanner-extension/` | DOM 采集、招聘者活跃度过滤、任务状态机、沟通流程 |
+| 消息回填层 | `chat-assistant-extension/` | WebSocket 连接、联系人定位、草稿回填和发送前复核 |
+| 接口层 | `backend/app/api/` | 岗位评估、管理面板、自我介绍和测试推送接口 |
+| 服务层 | `backend/app/services/` | Coze 调用、业务编排、规则检查、后台任务和连接管理 |
+| 数据层 | `backend/app/database/` | SQLAlchemy Model、Repository、事务保存与查询 |
+| Schema 层 | `backend/app/schemas/` | 请求、响应和任务消息的数据校验 |
+| 管理端 | `frontend/src/` | 岗位列表、详情、筛选、分析展示和状态维护 |
+| Workflow 层 | `coze/` | 岗位匹配和自我介绍生成的参考 Workflow |
+
+### 系统数据流
+
+```mermaid
+flowchart TD
+    User(("候选人"))
+
+    subgraph Browser["Browser"]
+        BossPage["BOSS 岗位列表"]
+        Scanner["Job Scanner Extension"]
+        ChatPage["BOSS 消息页"]
+        ChatAssistant["Chat Assistant Extension"]
+        Dashboard["Vue Dashboard"]
+    end
+
+    subgraph Backend["FastAPI Backend"]
+        JobAPI["Jobs API"]
+        DashboardAPI["Dashboard API"]
+        IntroAPI["Introduction Service"]
+        RuleEngine["去重 / 黑名单 / 白名单"]
+        WSManager["WebSocket Manager"]
+        Repository["Repository"]
+    end
+
+    subgraph AI["Coze Workflows"]
+        EvaluateWF["岗位匹配 Workflow"]
+        IntroWF["自我介绍 Workflow"]
+    end
+
+    SQLite[("SQLite")]
+
+    User --> BossPage --> Scanner --> JobAPI
+    JobAPI --> RuleEngine
+    RuleEngine --> EvaluateWF
+    EvaluateWF --> JobAPI
+    JobAPI --> Repository --> SQLite
+
+    SQLite --> DashboardAPI --> Dashboard --> User
+
+    JobAPI -->|高匹配且上下文完整| IntroAPI
+    IntroAPI --> IntroWF
+    IntroWF --> WSManager
+    WSManager --> ChatAssistant --> ChatPage --> User
+
+    classDef browser fill:#eef2ff,stroke:#818cf8,color:#111;
+    classDef backend fill:#fefce8,stroke:#facc15,color:#111;
+    classDef ai fill:#fff1f2,stroke:#fb7185,color:#111;
+    classDef storage fill:#f0fdf4,stroke:#4ade80,color:#111;
+
+    class BossPage,Scanner,ChatPage,ChatAssistant,Dashboard browser;
+    class JobAPI,DashboardAPI,IntroAPI,RuleEngine,WSManager,Repository backend;
+    class EvaluateWF,IntroWF ai;
+    class SQLite storage;
 ```
 
-## 项目结构
+数据流路径：扩展采集岗位 → 后端执行去重和规则检查 → Coze 返回结构化匹配结果 → SQLAlchemy 事务化保存 → Vue 看板展示；高匹配岗位在原评估响应完成后异步生成自我介绍 → WebSocket 推送 → 聊天扩展定位联系人并回填 → 用户检查后发送。
+
+### 数据存储与消息状态分工
+
+项目将长期业务数据、浏览器任务状态和短期推送消息分开处理：
+
+- **SQLite：保存长期业务数据**
+  - 保存岗位、技能标签、AI 评估、岗位要求、申请状态和首次沟通记录；
+  - `job_id` 唯一约束用于避免同一岗位被重复分析；
+  - AI 原始输出与结构化结果同时保留，便于后续排查和展示；
+  - 当前使用 SQLite 降低本地部署成本，`DATABASE_URL` 可替换为其他数据库连接。
+
+- **Chrome Storage：保存扩展本地状态**
+  - 保存处理过的岗位 ID、扫描计数、连接开关和自动发送开关；
+  - 扩展重载后仍可恢复用户选择，避免重复处理；
+  - 用户可以通过扩展弹窗清除当前任务进度。
+
+- **WebSocket pending 队列：保存短期推送任务**
+  - 自我介绍生成完成后先进入后端内存队列；
+  - 插件未连接时保留任务，连接恢复后重新推送；
+  - 收到任务 ACK 后删除，服务重启会清空该内存队列。
+
+简言之：**SQLite 存业务历史，Chrome Storage 存浏览器任务状态，pending 队列存尚未确认的实时消息。**
+
+---
+
+## 📁 项目结构
 
 ```text
-boss-job-dev/
-├─ job-scanner-extension/
-│  ├─ manifest.json
-│  ├─ popup/                 # 用户控制与状态展示
-│  ├─ background/            # FastAPI 网络通信
-│  ├─ content/               # 状态机、采集、遍历、沟通
-│  ├─ utils/                 # DOM、存储、日志工具
-│  ├─ config/                # 常量和集中 selector 配置
-│  ├─ icons/
-│  └─ README.md              # 安装与 DOM Selector 适配指南
-├─ backend/
-│  ├─ app/
-│  │  ├─ api/
-│  │  ├─ schemas/
-│  │  ├─ services/
-│  │  ├─ core/
-│  │  ├─ utils/
-│  │  └─ main.py
-│  ├─ data/
-│  ├─ tests/
-│  ├─ requirements.txt
-│  ├─ .env.example
-│  └─ README.md
-├─ chat-assistant-extension/ # 消息页联系人定位与自我介绍回填
-├─ .gitignore
-└─ README.md
+boss-auto-assistant/
+├── backend/
+│   ├── app/
+│   │   ├── api/                     # FastAPI 路由
+│   │   │   ├── jobs.py              # 单岗位与批量评估
+│   │   │   ├── dashboard.py         # 看板查询与状态更新
+│   │   │   ├── introductions.py     # 自我介绍异步生成
+│   │   │   └── chat_assistant.py    # 测试推送与 WebSocket
+│   │   ├── core/config.py           # 环境变量和全局配置
+│   │   ├── database/
+│   │   │   ├── models.py            # SQLAlchemy 数据模型
+│   │   │   ├── repositories.py      # 岗位数据写入
+│   │   │   └── dashboard_repository.py # 看板查询
+│   │   ├── schemas/                 # Pydantic 请求与响应模型
+│   │   ├── services/
+│   │   │   ├── job_service.py       # 岗位评估主编排
+│   │   │   ├── coze_client.py       # Coze HTTP 客户端
+│   │   │   ├── introduction_service.py # 自我介绍后台任务
+│   │   │   ├── websocket_manager.py # 连接、pending 与 ACK
+│   │   │   ├── job_blacklist.py     # 黑名单规则
+│   │   │   └── job_whitelist.py     # 批量模式白名单规则
+│   │   └── main.py                  # FastAPI 应用入口
+│   ├── config/                       # 黑白名单示例
+│   ├── data/                         # 本地 SQLite 数据库
+│   ├── scripts/import_json_to_db.py  # 历史 JSON 导入
+│   ├── tests/                        # Pytest 测试
+│   ├── .env.example
+│   └── requirements.txt
+├── frontend/
+│   ├── src/
+│   │   ├── api/jobs.ts              # Axios 接口封装
+│   │   ├── components/              # 岗位卡片、状态标签、侧栏
+│   │   ├── views/
+│   │   │   ├── JobOverview.vue      # 岗位总览与筛选
+│   │   │   ├── JobDetail.vue        # 岗位详情与分析结果
+│   │   │   ├── JobAnalysis.vue      # 规划中
+│   │   │   └── Management.vue       # 规划中
+│   │   └── router/index.ts
+│   └── package.json
+├── job-scanner-extension/
+│   ├── background/                   # 后端 HTTP 通信
+│   ├── config/                       # 常量与 DOM selector
+│   ├── content/                      # 采集、状态机和沟通
+│   ├── popup/                        # 控制面板
+│   ├── tests/
+│   └── manifest.json
+├── chat-assistant-extension/
+│   ├── background.js                 # WebSocket 与动态注入
+│   ├── content.js                    # 联系人定位与消息回填
+│   ├── popup.*                       # 连接和发送开关
+│   ├── tests/
+│   └── manifest.json
+├── coze/
+│   ├── coze-workflow-1.flow          # 岗位匹配 Workflow
+│   └── coze-workflow-2.flow          # 自我介绍 Workflow
+├── .gitignore
+└── README.md
 ```
 
-## 启动 FastAPI
+### 关键文件职责
+
+**岗位筛选扩展**
+
+- `job-scanner-extension/content/scanner.js`
+  编排岗位遍历、页面切换、暂停/停止、滚动加载和后端评估流程。
+- `job-scanner-extension/content/job-extractor.js`
+  从岗位卡片和详情区域提取岗位、公司、招聘者、薪资、标签和描述。
+- `job-scanner-extension/content/communication.js`
+  定位沟通按钮、识别成功弹窗，并在弹窗关闭后继续处理下一岗位。
+- `job-scanner-extension/config/selectors.js`
+  集中管理 DOM selector 候选，页面结构变化时优先调整此处。
+
+**后端**
+
+- `backend/app/services/job_service.py`
+  岗位评估主流程，依次执行去重、黑名单、Workflow 调用、保存和状态计算。
+- `backend/app/services/coze_client.py`
+  封装 Coze 请求、超时、响应解析和异常分类。
+- `backend/app/services/introduction_service.py`
+  调度自我介绍后台任务、保存首次沟通内容并推送扩展。
+- `backend/app/services/websocket_manager.py`
+  管理扩展连接、pending 队列、任务重推与 ACK。
+- `backend/app/database/models.py`
+  定义岗位、标签、评估、要求、申请和沟通记录的数据关系与约束。
+- `backend/app/services/dashboard_service.py`
+  为管理端提供分页筛选、详情查询和求职状态更新。
+
+**管理端与消息扩展**
+
+- `frontend/src/views/JobOverview.vue`
+  岗位卡片总览，支持状态、最低匹配分、关键词和分页筛选。
+- `frontend/src/views/JobDetail.vue`
+  展示岗位基本信息、要求分析、自我介绍依据和已生成沟通内容。
+- `chat-assistant-extension/background.js`
+  按用户开关管理 WebSocket、心跳重连和 content script 动态注入。
+- `chat-assistant-extension/content.js`
+  评分定位联系人，校验聊天对象，写入草稿并执行可选发送。
+
+---
+
+## 🚀 启动项目
+
+后端、前端和两个扩展均在本地运行。以下命令默认从项目根目录 `boss-auto-assistant/` 开始执行，以 Windows PowerShell 为例。
+
+### 1. 配置并启动后端
 
 ```powershell
 cd backend
-conda activate gluon1
+python -m venv .venv
+.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
+
 Copy-Item .env.example .env
+Copy-Item config/job_blacklist.example.json config/job_blacklist.json
 Copy-Item config/job_whitelist.example.json config/job_whitelist.json
+
+# 编辑 .env，填写 Coze 地址、Workflow ID 和所需凭据
 uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 ```
 
-健康检查：`http://127.0.0.1:8000/health`；Swagger：`http://127.0.0.1:8000/docs`。
+后端启动后可访问：
 
-## 加载 Chrome 插件
+```text
+健康检查: http://127.0.0.1:8000/health
+API 文档: http://127.0.0.1:8000/docs
+```
 
-在 Chrome 打开 `chrome://extensions`，开启开发者模式，点击“加载已解压的扩展程序”，选择 `job-scanner-extension`。随后打开 BOSS 岗位搜索列表并刷新页面，再点击扩展的“开始”。完整 selector 适配步骤见 [job-scanner-extension/README.md](job-scanner-extension/README.md)。
+### 2. 启动管理端
 
-## 推荐验收顺序
+另开一个终端：
 
-1. 先访问 `/health`，再用 Swagger 提交一个岗位，确认 `backend/data/jobs.db` 出现对应数据且响应包含匹配分。
-2. 加载扩展，在真实 BOSS 页面用 `window.__BOSS_PLUGIN_DEBUG__` 验证列表、详情和描述 selector。
-3. 关闭“是否海投”，点击开始，确认逐个采集、保存、跳过，并根据页面结构滚动左侧容器或全局页面。
-4. 确认沟通按钮和成功弹窗 selector 无误后，再小范围开启“是否海投”测试固定 71 分的“立即沟通 → 留在此页”流程。
+```powershell
+cd frontend
+npm ci
+npm run dev
+```
 
-在真实页面验证时应先使用一个确定低于 `MATCH_THRESHOLD` 的 Coze 测试结果，避免意外向招聘方发送消息，同时覆盖 DOM 采集、后台通信、数据库保存、去重、切换和滚动等核心能力。
+管理端地址：<http://127.0.0.1:5173>。Vite 会将 `/api` 请求代理到本地 FastAPI。
 
-插件等待 FastAPI 最多 120 秒；FastAPI 等待 Coze Workflow 默认最多 90 秒。
-后端超时可通过 `backend/.env` 中的 `COZE_TIMEOUT_SECONDS` 调整，修改后需
-重启 FastAPI；插件超时可在 `job-scanner-extension/config/constants.js` 中调整，修改后需在
-Chrome 扩展管理页重新加载插件。
+### 3. 加载 Chrome 扩展
 
-Coze Workflow 超时后，FastAPI 会记录错误日志，以默认 50 分保存带有降级标记的
-岗位结果并正常响应插件。插件会将其视为匹配度不足，跳过沟通并继续处理下一岗位。
-可通过 `COZE_TIMEOUT_FALLBACK_SCORE` 调整该默认分数。
+1. 在 Chrome 打开 `chrome://extensions/`；
+2. 开启“开发者模式”；
+3. 点击“加载已解压的扩展程序”，选择 `job-scanner-extension`；
+4. 再次加载 `chat-assistant-extension`；
+5. 打开或刷新对应的 BOSS 岗位列表页和消息页。
 
-## 第二阶段配置与测试
+首次验证时建议保持批量模式和自动发送关闭，先确认岗位采集、AI 响应、联系人定位与草稿回填均符合预期。
 
-在 `backend/.env` 增加：
+---
+
+## 🔐 环境变量
+
+复制 `backend/.env.example` 为 `backend/.env` 后配置：
 
 ```env
+# 服务
+APP_NAME=BOSS Job Evaluator
+HOST=127.0.0.1
+PORT=8000
+MATCH_THRESHOLD=70
+
+# 数据
+DATA_DIR=data
+# DATABASE_URL=sqlite:///data/jobs.db
+JOB_BLACKLIST_CONFIG=config/job_blacklist.json
+JOB_WHITELIST_CONFIG=config/job_whitelist.json
+
+# Coze 岗位匹配
+COZE_BASE_URL=http://127.0.0.1:8888
+COZE_WORKFLOW_ID=your-job-evaluation-workflow-id
+COZE_TOKEN=your-token
+COZE_TIMEOUT_SECONDS=90
+COZE_TIMEOUT_FALLBACK_SCORE=50
+
+# Coze 自我介绍生成
 COZE_INTRODUCTION_WORKFLOW_ID=your-introduction-workflow-id
 COZE_INTRODUCTION_TIMEOUT_SECONDS=90
 ```
 
-在 Chrome 扩展页加载 `chat-assistant-extension`，然后打开 BOSS 消息页。插件默认不连接
-本地服务；点击插件图标将“连接本地服务”设为“是”后，才会连接
-`ws://127.0.0.1:8000/ws/chat-assistant-extension`。自动发送同样默认关闭，开启后会在回填
-复核完成后等待 0.5～1 秒再发送。可调用测试接口单独验证回填：
+注意：
+
+- `.env` 已加入 `.gitignore`，不要提交真实 Token 或 Workflow ID；
+- 自我介绍功能可选，不配置 `COZE_INTRODUCTION_WORKFLOW_ID` 时不影响基础岗位评估；
+- 修改环境变量后需要重启 FastAPI；
+- 插件默认连接 `127.0.0.1:8000`，修改端口时需要同步修改扩展配置；
+- 后端默认监听本机地址，如需公网部署应额外增加鉴权、访问控制和 HTTPS。
+
+---
+
+## 📡 核心接口
+
+| 方法 | 路径 | 说明 |
+| :--- | :--- | :--- |
+| `GET` | `/health` | 后端健康检查 |
+| `POST` | `/api/v1/jobs/evaluate` | 调用 Coze 评估岗位并保存结果 |
+| `POST` | `/api/v1/jobs/bulk-evaluate` | 执行去重、黑名单和白名单检查后保存批量岗位 |
+| `GET` | `/api/v1/dashboard/jobs` | 分页、筛选和搜索岗位 |
+| `GET` | `/api/v1/dashboard/jobs/{job_id}` | 查询岗位详情与分析结果 |
+| `PATCH` | `/api/v1/dashboard/jobs/{job_id}/status` | 更新求职进度状态 |
+| `POST` | `/api/v1/introductions/generate` | 独立调度自我介绍后台任务 |
+| `POST` | `/api/v1/chat-assistant-extension/test` | 绕过 AI 流程推送一条测试回填任务 |
+| `WS` | `/ws/chat-assistant-extension` | 自我介绍推送、心跳和 ACK 通道 |
+
+接口字段与实时响应可以通过 Swagger：<http://127.0.0.1:8000/docs> 查看。
+
+---
+
+## 🧪 测试与验证
+
+### 后端测试
 
 ```powershell
-$body = @{
-    company_name = "治粟科技"
-    hr_name = "朱先生"
-    hr_title = "招聘经理"
-    job_name = "python开发工程师"
-    greeting_message = "你好，这是插件2 WebSocket 自动回填测试消息。"
-} | ConvertTo-Json
-
-Invoke-RestMethod -Method Post `
-    -Uri "http://127.0.0.1:8000/api/v1/chat-assistant-extension/test" `
-    -ContentType "application/json" `
-    -Body $body
+cd backend
+$env:PYTHONPATH = "."
+pytest
 ```
 
-完整安装和定位规则见 [chat-assistant-extension/README.md](chat-assistant-extension/README.md)。
+### 岗位筛选扩展测试
 
-自我介绍 Coze 链路还可以通过独立接口触发：
+```powershell
+node --test job-scanner-extension/tests/*.test.cjs
+```
+
+### 消息回填扩展测试
+
+```powershell
+node --test chat-assistant-extension/tests/*.test.cjs
+```
+
+### 前端生产构建
+
+```powershell
+cd frontend
+npm run build
+```
+
+当前本地验证结果：
 
 ```text
-POST http://127.0.0.1:8000/api/v1/introductions/generate
+Backend:                 74 passed
+Job Scanner Extension:    5 passed
+Chat Assistant Extension: 5 passed
+Frontend Build:           passed
 ```
 
-`/jobs/evaluate` 仍保持原有岗位评估响应，只在分数达标且
-`self_intro_context` 非空时异步调用同一个 introduction service。
+测试覆盖接口状态码、Coze 响应解析、数据库事务、岗位去重、黑白名单、配置缓存、自我介绍调度、WebSocket 重连、content script 恢复、接口选择和招聘者活跃度边界等场景。
 
-两个岗位入口都会先按非空 `job_id` 查询数据库，再检查黑名单。重复岗位或黑名单
-岗位统一返回 0 分且不会继续处理。岗位筛选扩展弹窗中的“是否海投”默认关闭：关闭时
-请求 `POST /api/v1/jobs/evaluate`；开启时请求 `POST /api/v1/jobs/bulk-evaluate`。
-海投接口随后还会检查 `backend/config/job_whitelist.json`，只有命中白名单才保存岗位
-及固定 71 分的评估结果；未命中返回 0 分且不保存，全程不调用任何 Coze Workflow。
+---
 
-插件使用可中断等待，避免测试过程中连续切换导致目标页面重载。间隔可在 `job-scanner-extension/config/constants.js` 中调整。
+## 🔄 关键业务链路
+
+### 普通岗位评估
+
+```text
+POST /api/v1/jobs/evaluate
+  -> JobService.evaluate
+    -> ① 按 job_id 查询数据库，跳过重复岗位
+    -> ② 检查本地黑名单
+    -> ③ CozeClient 调用岗位匹配 Workflow
+    -> ④ 解析 match_score、岗位要求和 self_intro_context
+    -> ⑤ SQLAlchemy 事务化保存岗位、评估和申请状态
+    -> ⑥ 返回匹配分
+    -> ⑦ 高匹配且上下文完整时，后台调度自我介绍生成
+```
+
+### 自我介绍生成与回填
+
+```text
+Introduction Background Task
+  -> ① 调用自我介绍 Workflow
+  -> ② 首次生成内容写入 communications
+  -> ③ 消息加入 WebSocket pending 队列
+  -> ④ 聊天扩展连接后接收任务
+  -> ⑤ 按姓名 + 公司 + 职位定位联系人
+  -> ⑥ 校验右侧聊天对象并写入草稿
+  -> ⑦ 用户手动发送，或在显式开启后执行自动发送
+  -> ⑧ 扩展返回 ACK，后端移除 pending 消息
+```
+
+### 受约束的批量模式
+
+```text
+POST /api/v1/jobs/bulk-evaluate
+  -> ① 数据库 job_id 去重
+  -> ② 黑名单检查
+  -> ③ 白名单检查
+  -> ④ 命中白名单才保存岗位和固定评估结果
+  -> ⑤ 不调用任何 Coze Workflow
+  -> ⑥ 未命中规则时返回 0 分且不保存
+```
+
+该模式通过“默认关闭 + 本地白名单 + 去重 + 黑名单”限制处理范围，避免对页面中的所有岗位无差别执行操作。
+
+---
+
+## 🛠️ 常见问题
+
+### 岗位扩展没有响应
+
+优先检查：
+
+- FastAPI 是否启动在 `127.0.0.1:8000`；
+- 是否在扩展管理页重新加载了最新代码；
+- 当前页面是否为 `https://www.zhipin.com/web/geek/jobs*`；
+- 浏览器扩展 Service Worker 控制台是否存在网络或超时错误。
+
+### AI 评估返回配置错误
+
+优先检查：
+
+- `COZE_BASE_URL` 是否可访问；
+- `COZE_WORKFLOW_ID` 和 `COZE_TOKEN` 是否正确；
+- 目标服务是否兼容 `POST /v1/workflow/run`；
+- 修改 `.env` 后是否重启后端。
+
+### 管理端没有岗位数据
+
+优先检查：
+
+- 是否已经通过评估接口成功保存岗位；
+- `backend/data/jobs.db` 是否存在；
+- 前端是否运行在 Vite 开发服务器，并成功代理 `/api`；
+- 浏览器 Network 面板中的 `/api/v1/dashboard/jobs` 是否返回成功。
+
+### 消息扩展没有连接
+
+消息扩展默认不连接后端。点击扩展图标，将“连接本地服务”设置为“是”，再确认 BOSS 消息页已经刷新。自动发送是另一个独立开关，保持关闭时只会回填草稿。
+
+### 页面改版后采集失败
+
+先参考 [岗位筛选扩展文档](job-scanner-extension/README.md) 使用 `window.__BOSS_PLUGIN_DEBUG__` 检查 selector，再优先调整 `job-scanner-extension/config/selectors.js`。避免依赖动态哈希 class、`nth-child` 或屏幕坐标。
+
+---
+
+## ✅ 当前完成度
+
+- ✅ **岗位采集扩展**：串行遍历、DOM 采集、招聘者活跃度过滤、暂停/停止、去重和滚动加载
+- ✅ **岗位匹配能力**：Coze Workflow 调用、结构化响应解析、超时控制和降级结果保存
+- ✅ **规则控制**：数据库去重、黑名单、受白名单约束的批量模式和配置缓存
+- ✅ **数据持久化**：岗位、标签、评估要求、申请状态和沟通记录的关系建模与事务保存
+- ✅ **管理端主流程**：岗位总览、分页筛选、关键词搜索、详情查看和状态更新
+- ✅ **自我介绍链路**：后台生成、首次内容保存、WebSocket pending/ACK 和聊天页回填
+- ✅ **误操作防护**：连接与发送默认关闭、联系人歧义停止、发送前二次校验
+- ✅ **工程验证**：84 项自动化测试与前端生产构建通过
+- 🚧 **岗位分析页**：当前为占位页面，后续增加聚合统计与技能分布
+- 🚧 **管理功能页**：当前为占位页面，后续增加规则与运行参数的可视化配置
+- ⚠️ **页面依赖**：第三方页面结构变化后可能需要更新 DOM selector
+- ⚠️ **外部服务依赖**：真实 AI 效果与延迟取决于 Workflow 服务及个人配置
+
+---
+
+## 🌱 后续优化方向
+
+- 🚧 **管理端数据分析**
+  增加岗位数量、分数分布、技能关键词、各阶段转化和公司维度统计。
+- 🚧 **规则可视化配置**
+  在管理页面维护黑名单、白名单、匹配阈值和扩展运行参数，减少手工编辑 JSON。
+- 🚧 **Docker 与 CI/CD**
+  增加 Docker Compose、本地一键启动和 GitHub Actions，自动运行后端、扩展与前端验证。
+- 🚧 **可观测性**
+  增加结构化日志、任务耗时、Workflow 成功率、降级次数和错误分类统计。
+- 🚧 **匹配策略优化 Agent**
+  基于历史岗位数据、匹配结果和投递反馈，自动分析低质量匹配原因，辅助优化 Prompt、简历知识库以及黑名单、白名单等筛选规则。
+
+- 🚧 **AI 驱动规则优化**
+  读取岗位数据库和历史投递数据，分析高频低匹配岗位特征，自动生成黑名单、白名单和匹配阈值调整建议，减少人工维护成本。
+
+- 🚧 **简历知识库智能优化**
+  根据岗位需求和匹配失败案例，分析当前简历知识库覆盖不足的问题，优化项目经历、技能标签和岗位关联关系，提高岗位匹配准确率。
+
+- 🚧 **Prompt 效果分析与优化**
+  基于岗位分析结果、匹配评分和实际投递反馈，评估 LLM 工作流输出质量，自动发现 Prompt 中存在的问题并生成优化建议。
+
+- 🚧 **数据分析 Tool 集成**
+  为 Agent 提供岗位数据、匹配记录、规则配置等查询能力，使 AI 能够基于真实业务数据进行分析和决策。
+
+- 🚧 **智能运营优化 Agent**
+  构建面向求职流程的自优化闭环，通过“数据采集 → 效果分析 → 策略调整 → 规则更新”持续提升自动投递效果。
+
+---
+
+## 📚 详细文档
+
+- [FastAPI 后端文档](backend/README.md)
+- [岗位筛选扩展文档](job-scanner-extension/README.md)
+- [消息回填扩展文档](chat-assistant-extension/README.md)

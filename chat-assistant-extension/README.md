@@ -52,9 +52,9 @@
 
 ```powershell
 $body = @{
-    company_name = "治粟科技"
-    hr_name = "朱先生"
-    hr_title = "招聘经理"
+    company_name = "示例科技"
+    hr_name = "招聘负责人"
+    hr_title = "招聘专员"
     job_name = "python开发工程师"
     greeting_message = "你好，这是插件2 WebSocket 自动回填测试消息。"
 } | ConvertTo-Json
